@@ -12,8 +12,9 @@ import io.github.gone.utils.ShapeRendererManager;
 /**
  * A minigame that requires the player to time their click
  * when a rotating line passes through a highlighted area.
+ * Used to determine the throw distance and fish type.
  */
-public class SkillCheckMinigame {
+public class ThrowMinigame {
     // Constants
     private static final float CIRCLE_RADIUS = 60f;
     private static final float GREAT_ZONE_SIZE = 30f;
@@ -70,13 +71,13 @@ public class SkillCheckMinigame {
     private final GlyphLayout glyphLayout;
     
     // Events
-    private SkillCheckListener listener;
+    private ThrowMinigameListener listener;
     
-    public interface SkillCheckListener {
-        void onSkillCheckComplete(SuccessLevel successLevel);
+    public interface ThrowMinigameListener {
+        void onThrowComplete(SuccessLevel successLevel);
     }
     
-    public SkillCheckMinigame(float centerX, float centerY) {
+    public ThrowMinigame(float centerX, float centerY) {
         this.centerX = centerX;
         this.centerY = centerY;
         this.currentAngle = 0;
@@ -92,7 +93,7 @@ public class SkillCheckMinigame {
         this.glyphLayout = new GlyphLayout();
     }
     
-    public void setListener(SkillCheckListener listener) {
+    public void setListener(ThrowMinigameListener listener) {
         this.listener = listener;
     }
     
@@ -199,7 +200,7 @@ public class SkillCheckMinigame {
         // Instruction text if active
         if (isActive) {
             font.setColor(Color.WHITE);
-            String instruction = "Click when in green zone!";
+            String instruction = "Click to throw!";
             glyphLayout.setText(font, instruction);
             font.draw(batch, instruction, centerX - glyphLayout.width / 2, centerY - CIRCLE_RADIUS - 20);
         }
@@ -216,7 +217,7 @@ public class SkillCheckMinigame {
         
         // Notify listener
         if (listener != null) {
-            listener.onSkillCheckComplete(successLevel);
+            listener.onThrowComplete(successLevel);
         }
     }
     

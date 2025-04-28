@@ -5,7 +5,9 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import io.github.gone.utils.ShapeRendererManager;
-import io.github.gone.minigames.SkillCheckMinigame;
+import io.github.gone.minigames.ThrowMinigame;
+import io.github.gone.fish.Fish;
+import io.github.gone.fish.FishLootTable;
 
 public class FishingRod {
     private final Vector2 position;
@@ -19,17 +21,20 @@ public class FishingRod {
     private final float goodBonusLineLength = 50f; // Additional length for "Good" success
     private final float greatBonusLineLength = 100f; // Additional length for "Great" success
     private boolean isReeling;
-    private SkillCheckMinigame.SuccessLevel currentSuccessLevel = SkillCheckMinigame.SuccessLevel.MISS;
+    private ThrowMinigame.SuccessLevel currentSuccessLevel = ThrowMinigame.SuccessLevel.MISS;
     
     private final ShapeRendererManager shapeRenderer;
-    private final SkillCheckMinigame skillCheck;
+    private final ThrowMinigame throwMinigame;
+    private final FishLootTable fishLootTable;
+    private Fish caughtFish;
     
     // States for fishing process
     private enum FishingState {
         IDLE,
-        SKILL_CHECK,
+        THROW_MINIGAME,
         CASTING,
-        REELING
+        REELING,
+        CAUGHT_FISH
     }
     
     private FishingState currentState;
@@ -41,35 +46,39 @@ public class FishingRod {
         this.isReeling = false;
         this.shapeRenderer = new ShapeRendererManager();
         this.currentState = FishingState.IDLE;
+        this.fishLootTable = new FishLootTable();
         
-        // Create skill check minigame at the center of the screen
-        this.skillCheck = new SkillCheckMinigame(position.x, position.y + 150);
-        this.skillCheck.setListener(new SkillCheckMinigame.SkillCheckListener() {
+        // Create throw minigame at the center of the screen
+        this.throwMinigame = new ThrowMinigame(position.x, position.y + 150);
+        this.throwMinigame.setListener(new ThrowMinigame.ThrowMinigameListener() {
             @Override
-            public void onSkillCheckComplete(SkillCheckMinigame.SuccessLevel successLevel) {
-                onSkillCheckFinished(successLevel);
+            public void onThrowComplete(ThrowMinigame.SuccessLevel successLevel) {
+                onThrowMinigameFinished(successLevel);
             }
         });
     }
     
     /**
-     * Called when the skill check minigame finishes
+     * Called when the throw minigame finishes
      */
-    private void onSkillCheckFinished(SkillCheckMinigame.SuccessLevel successLevel) {
+    private void onThrowMinigameFinished(ThrowMinigame.SuccessLevel successLevel) {
         // Start fishing with appropriate bonus based on success level
         currentState = FishingState.CASTING;
         isFishing = true;
         isReeling = false;
         lineLength = 0;
         currentSuccessLevel = successLevel;
+        
+        // Determine what fish will be caught using the loot table
+        caughtFish = fishLootTable.determineFish(successLevel);
     }
     
     public void update(float delta) {
-        // Update skill check minigame if active
-        skillCheck.update(delta);
+        // Update throw minigame if active
+        throwMinigame.update(delta);
         
-        if (currentState == FishingState.SKILL_CHECK) {
-            // Wait for skill check to complete
+        if (currentState == FishingState.THROW_MINIGAME) {
+            // Wait for throw minigame to complete
             return;
         }
         
@@ -102,17 +111,25 @@ public class FishingRod {
             if (lineLength <= 0) {
                 lineLength = 0;
                 isReeling = false;
-                isFishing = false;
-                currentSuccessLevel = SkillCheckMinigame.SuccessLevel.MISS;
-                currentState = FishingState.IDLE;
+                
+                // If we caught a fish (determined by the success level)
+                if (currentSuccessLevel != ThrowMinigame.SuccessLevel.MISS) {
+                    currentState = FishingState.CAUGHT_FISH;
+                } else {
+                    // Reset if we missed
+                    isFishing = false;
+                    currentSuccessLevel = ThrowMinigame.SuccessLevel.MISS;
+                    currentState = FishingState.IDLE;
+                    caughtFish = null;
+                }
             }
         }
     }
     
     public void draw(SpriteBatch batch) {
-        // If skill check is active, draw it and return
-        if (currentState == FishingState.SKILL_CHECK) {
-            skillCheck.draw(batch);
+        // If throw minigame is active, draw it and return
+        if (currentState == FishingState.THROW_MINIGAME) {
+            throwMinigame.draw(batch);
             return;
         }
         
@@ -133,10 +150,10 @@ public class FishingRod {
             
             // Draw a small circle at the end of the line (the bait)
             // Change color and size based on success level
-            if (currentSuccessLevel == SkillCheckMinigame.SuccessLevel.GREAT) {
+            if (currentSuccessLevel == ThrowMinigame.SuccessLevel.GREAT) {
                 shapeRenderer.setColor(Color.GREEN);
                 shapeRenderer.getShapeRenderer().circle(position.x, position.y + rodLength + lineLength, 7);
-            } else if (currentSuccessLevel == SkillCheckMinigame.SuccessLevel.GOOD) {
+            } else if (currentSuccessLevel == ThrowMinigame.SuccessLevel.GOOD) {
                 shapeRenderer.setColor(Color.YELLOW);
                 shapeRenderer.getShapeRenderer().circle(position.x, position.y + rodLength + lineLength, 6);
             } else {
@@ -158,9 +175,18 @@ public class FishingRod {
         // Begin SpriteBatch again
         batch.begin();
         
-        // Draw skill check result message if needed
-        if (skillCheck.isShowingResult()) {
-            skillCheck.draw(batch);
+        // Draw throw minigame result message if needed
+        if (throwMinigame.isShowingResult()) {
+            throwMinigame.draw(batch);
+        }
+        
+        // Draw the caught fish if in that state
+        if (currentState == FishingState.CAUGHT_FISH && caughtFish != null) {
+            caughtFish.draw(batch, position.x, position.y + rodLength + 100);
+            
+            // Display fish info (name and description)
+            batch.end();
+            batch.begin();
         }
     }
     
@@ -171,16 +197,22 @@ public class FishingRod {
     
     public void startFishing() {
         if (!isFishing && currentState == FishingState.IDLE) {
-            currentState = FishingState.SKILL_CHECK;
-            skillCheck.start();
+            currentState = FishingState.THROW_MINIGAME;
+            throwMinigame.start();
         }
     }
     
     public void handleClick(float x, float y) {
-        if (currentState == FishingState.SKILL_CHECK) {
-            skillCheck.onClick();
+        if (currentState == FishingState.THROW_MINIGAME) {
+            throwMinigame.onClick();
         } else if (currentState == FishingState.CASTING && lineLength >= getMaxReachableLength() && !isReeling) {
             startReeling();
+        } else if (currentState == FishingState.CAUGHT_FISH) {
+            // Return to idle state when clicked after catching a fish
+            currentState = FishingState.IDLE;
+            isFishing = false;
+            currentSuccessLevel = ThrowMinigame.SuccessLevel.MISS;
+            caughtFish = null;
         } else if (isPointInCastButton(x, y) && currentState == FishingState.IDLE) {
             startFishing();
         }
@@ -201,8 +233,8 @@ public class FishingRod {
         return isReeling;
     }
     
-    public boolean isInSkillCheck() {
-        return currentState == FishingState.SKILL_CHECK;
+    public boolean isInThrowMinigame() {
+        return currentState == FishingState.THROW_MINIGAME;
     }
     
     public float getLineLength() {
@@ -225,12 +257,25 @@ public class FishingRod {
         }
     }
     
+    public Fish getCaughtFish() {
+        return caughtFish;
+    }
+    
     public void dispose() {
         if (shapeRenderer != null) {
             shapeRenderer.dispose();
         }
-        if (skillCheck != null) {
-            skillCheck.dispose();
+        if (throwMinigame != null) {
+            throwMinigame.dispose();
+        }
+        if (caughtFish != null) {
+            if (caughtFish instanceof io.github.gone.fish.CommonFish) {
+                ((io.github.gone.fish.CommonFish) caughtFish).dispose();
+            } else if (caughtFish instanceof io.github.gone.fish.RareFish) {
+                ((io.github.gone.fish.RareFish) caughtFish).dispose();
+            } else if (caughtFish instanceof io.github.gone.fish.LegendaryFish) {
+                ((io.github.gone.fish.LegendaryFish) caughtFish).dispose();
+            }
         }
     }
 } 
