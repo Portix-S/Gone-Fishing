@@ -215,6 +215,17 @@ public class ThrowMinigame {
         isActive = false;
         showResultOnly = true;
         
+        // Log throw result information
+        Gdx.app.log("ThrowMinigame", "===============================================");
+        Gdx.app.log("ThrowMinigame", "THROW RESULT");
+        Gdx.app.log("ThrowMinigame", "Success Level: " + successLevel);
+        Gdx.app.log("ThrowMinigame", "Current Angle: " + currentAngle);
+        Gdx.app.log("ThrowMinigame", "Target Angle: " + successZoneStartAngle);
+        Gdx.app.log("ThrowMinigame", "Great Zone: " + successZoneStartAngle + " to " + (successZoneStartAngle + GREAT_ZONE_SIZE));
+        Gdx.app.log("ThrowMinigame", "Left Good Zone: " + (successZoneStartAngle - GOOD_ZONE_SIZE) + " to " + successZoneStartAngle);
+        Gdx.app.log("ThrowMinigame", "Right Good Zone: " + (successZoneStartAngle + GREAT_ZONE_SIZE) + " to " + (successZoneStartAngle + GREAT_ZONE_SIZE + GOOD_ZONE_SIZE));
+        Gdx.app.log("ThrowMinigame", "===============================================");
+        
         // Notify listener
         if (listener != null) {
             listener.onThrowComplete(successLevel);
