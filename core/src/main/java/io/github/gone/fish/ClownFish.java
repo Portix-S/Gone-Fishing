@@ -63,6 +63,9 @@ public class ClownFish extends Fish {
         // Black outlines around stripes (simplified)
         shapeRenderer.setColor(Color.BLACK);
         
+        // End filled shape mode and begin line mode
+        shapeRenderer.end();
+        
         // Outline around head stripe
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
         shapeRenderer.getShapeRenderer().ellipse(x + 10, y - 10, 10, 20);

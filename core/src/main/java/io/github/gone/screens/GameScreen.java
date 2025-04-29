@@ -32,6 +32,15 @@ public class GameScreen implements Screen {
     private static final float LOG_BUTTON_Y = WORLD_HEIGHT - LOG_BUTTON_SIZE - 10; // 10 pixels from top
     private static final Color LOG_BUTTON_COLOR = new Color(0.2f, 0.6f, 0.8f, 1); // Cyan-ish blue
     
+    // Background colors
+    private static final Color SUN_COLOR = new Color(1f, 0.9f, 0.5f, 1);
+    private static final Color CLOUD_COLOR = new Color(0.95f, 0.95f, 0.95f, 1);
+    private static final Color LAND_COLOR = new Color(0.5f, 0.35f, 0.2f, 1);
+    private static final Color DOCK_COLOR = new Color(0.4f, 0.3f, 0.2f, 1);
+    private static final Color WATER_COLOR = new Color(0.2f, 0.4f, 0.8f, 0.8f);
+    private static final Color WAVES_COLOR = new Color(0.8f, 0.9f, 1f, 0.7f);
+    private static final Color SKY_COLOR = new Color(0.4f, 0.7f, 0.9f, 1f); // Base sky color
+    
     private final GoneFishingGame game;
     private final SpriteBatch batch;
     private final OrthographicCamera camera;
@@ -58,19 +67,28 @@ public class GameScreen implements Screen {
         viewport = new FitViewport(WORLD_WIDTH, WORLD_HEIGHT, camera);
         camera.position.set(viewport.getWorldWidth() / 2, viewport.getWorldHeight() / 2, 0);
         
-        fishingRod = new FishingRod(new Vector2(WORLD_WIDTH / 2, WORLD_HEIGHT / 4));
+        // Make sure we enable blending for transparent objects
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        
+        // Initialize progression manager first (other components might depend on it)
+        progressionManager = ProgressionManager.getInstance();
+        
+        // Create shape renderer - needed for many other components
+        shapeRenderer = new ShapeRendererManager();
+        
+        // Initialize text rendering components
+        buttonFont = new BitmapFont();
+        buttonFont.setColor(Color.WHITE);
+        glyphLayout = new GlyphLayout();
         
         // Create UI elements
         experienceBar = new ExperienceBar(20, WORLD_HEIGHT - 50, WORLD_WIDTH - 40);
         levelUpPopup = new LevelUpPopup();
         playerLogScreen = new PlayerLogScreen();
-        shapeRenderer = new ShapeRendererManager();
-        buttonFont = new BitmapFont();
-        buttonFont.setColor(Color.WHITE);
-        glyphLayout = new GlyphLayout();
         
-        // Initialize progression manager
-        progressionManager = ProgressionManager.getInstance();
+        // Position fishing rod at bottom left
+        fishingRod = new FishingRod(new Vector2(WORLD_WIDTH / 2, WORLD_HEIGHT / 4));
         
         // Initialize custom input handler
         inputHandler = new CustomInputHandler(fishingRod, viewport, levelUpPopup, playerLogScreen);
@@ -95,6 +113,9 @@ public class GameScreen implements Screen {
         camera.update();
         batch.setProjectionMatrix(camera.combined);
         
+        // Draw background
+        drawBackground();
+        
         batch.begin();
         
         // Draw fishing rod
@@ -103,7 +124,6 @@ public class GameScreen implements Screen {
         // Draw UI elements
         experienceBar.draw(batch);
         
-        // End batch to draw the log button with shape renderer
         batch.end();
         
         // Only show log button when not in throw minigame
@@ -120,26 +140,118 @@ public class GameScreen implements Screen {
             buttonFont.draw(batch, "Stats", 
                 LOG_BUTTON_X + (LOG_BUTTON_SIZE - glyphLayout.width) / 2,
                 LOG_BUTTON_Y + (LOG_BUTTON_SIZE + glyphLayout.height) / 2);
-            batch.end();
             
-            // Begin batch again for other UI elements
-            batch.begin();
+            // Draw level up popup if active
+            if (levelUpPopup.isActive()) {
+                levelUpPopup.draw(batch);
+            }
+            
+            // Draw player log screen if active
+            if (playerLogScreen.isActive()) {
+                playerLogScreen.draw(batch);
+            }
+            
+            batch.end();
         } else {
-            // Begin batch again if we didn't draw the button
+            // Begin batch again for popup UI elements
             batch.begin();
+            
+            // Draw level up popup if active
+            if (levelUpPopup.isActive()) {
+                levelUpPopup.draw(batch);
+            }
+            
+            // Draw player log screen if active
+            if (playerLogScreen.isActive()) {
+                playerLogScreen.draw(batch);
+            }
+            
+            batch.end();
+        }
+    }
+    
+    /**
+     * Draws the background with land, water, sky, and decorative elements
+     */
+    private void drawBackground() {
+        // We'll use ShapeRenderer for the background
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        
+        // Sky gradient (lighter at top)
+        for (int y = 0; y < WORLD_HEIGHT; y += 10) {
+            float ratio = y / WORLD_HEIGHT;
+            // Create a temporary color for the gradient
+            Color gradientColor = new Color(
+                SKY_COLOR.r + ratio * 0.1f, 
+                SKY_COLOR.g + ratio * 0.1f, 
+                SKY_COLOR.b, 
+                1
+            );
+            shapeRenderer.setColor(gradientColor);
+            shapeRenderer.getShapeRenderer().rect(0, y, WORLD_WIDTH, 10);
         }
         
-        // Draw level up popup if active
-        if (levelUpPopup.isActive()) {
-            levelUpPopup.draw(batch);
+        // Sun
+        shapeRenderer.setColor(SUN_COLOR);
+        shapeRenderer.getShapeRenderer().circle(WORLD_WIDTH - 80, WORLD_HEIGHT - 80, 40);
+        
+        // Clouds
+        drawCloud(80, WORLD_HEIGHT - 100, 1.2f);
+        drawCloud(200, WORLD_HEIGHT - 150, 0.8f);
+        drawCloud(350, WORLD_HEIGHT - 80, 1.0f);
+        
+        // Land (brown dirt)
+        shapeRenderer.setColor(LAND_COLOR);
+        shapeRenderer.getShapeRenderer().rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT / 5);
+        
+        // Land edge (dock-like)
+        shapeRenderer.setColor(DOCK_COLOR);
+        shapeRenderer.getShapeRenderer().rect(0, WORLD_HEIGHT / 5, WORLD_WIDTH, 10);
+        
+        // Water
+        shapeRenderer.setColor(WATER_COLOR);
+        shapeRenderer.getShapeRenderer().rect(0, WORLD_HEIGHT / 5 + 10, WORLD_WIDTH, WORLD_HEIGHT * 0.6f - 10);
+        
+        shapeRenderer.end();
+        
+        // Draw waves - use a separate begin/end block for the lines
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.setColor(WAVES_COLOR);
+        
+        // Draw several wave lines
+        float waveY = WORLD_HEIGHT / 5 + 10;
+        for (int i = 0; i < 10; i++) {
+            drawWaveLine(waveY + i * 20, 0.5f);
         }
         
-        // Draw player log screen if active
-        if (playerLogScreen.isActive()) {
-            playerLogScreen.draw(batch);
-        }
+        shapeRenderer.end();
+    }
+    
+    /**
+     * Helper method to draw a cloud
+     */
+    private void drawCloud(float x, float y, float scale) {
+        shapeRenderer.setColor(CLOUD_COLOR);
+        shapeRenderer.getShapeRenderer().circle(x, y, 20 * scale);
+        shapeRenderer.getShapeRenderer().circle(x + 15 * scale, y + 10 * scale, 15 * scale);
+        shapeRenderer.getShapeRenderer().circle(x + 25 * scale, y - 5 * scale, 17 * scale);
+        shapeRenderer.getShapeRenderer().circle(x - 20 * scale, y, 15 * scale);
+    }
+    
+    /**
+     * Helper method to draw a wave line
+     */
+    private void drawWaveLine(float y, float amplitude) {
+        float waveFrequency = 10f;
+        float lastX = 0;
+        float lastY = y + (float) Math.sin(0) * amplitude * 5;
         
-        batch.end();
+        for (float x = 10; x <= WORLD_WIDTH; x += 10) {
+            float newY = y + (float) Math.sin(x / waveFrequency) * amplitude * 5;
+            shapeRenderer.getShapeRenderer().line(lastX, lastY, x, newY);
+            lastX = x;
+            lastY = newY;
+        }
     }
     
     private void update(float delta) {
@@ -229,17 +341,17 @@ public class GameScreen implements Screen {
             viewport.unproject(touchPoint);
             
             // Check if player log screen is active
-            if (playerLogScreen.isActive()) {
+            if (playerLogScreen != null && playerLogScreen.isActive()) {
                 return playerLogScreen.handleClick(touchPoint.x, touchPoint.y);
             }
             
             // Check if level up popup is active and handle click
-            if (levelUpPopup.isActive()) {
+            if (levelUpPopup != null && levelUpPopup.isActive()) {
                 return levelUpPopup.handleClick(touchPoint.x, touchPoint.y);
             }
             
             // Check if log button was clicked
-            if (!fishingRod.isInThrowMinigame() && !fishingRod.isShowingFishCaught() && 
+            if (fishingRod != null && !fishingRod.isInThrowMinigame() && !fishingRod.isShowingFishCaught() && 
                 isPointInLogButton(touchPoint.x, touchPoint.y)) {
                 playerLogScreen.show(new PlayerLogScreen.Callback() {
                     @Override
