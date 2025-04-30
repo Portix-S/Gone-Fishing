@@ -260,24 +260,24 @@ public class FishingRod {
             shapeRenderer.end();
             shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
             
-            // Draw line with slight curve for realism
-            drawFishingLine(tipX, tipY);
+            // Draw line with parabolic curve and get bait position
+            Vector2 baitPosition = drawFishingLine(tipX, tipY);
             
             // Go back to filled shapes for the bait circle
             shapeRenderer.end();
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             
-            // Draw a small circle at the end of the line (the bait)
+            // Draw a small circle at the end of the line (the bait) at the exact endpoint of the curve
             // Change color and size based on success level
             if (currentSuccessLevel == ThrowMinigame.SuccessLevel.GREAT) {
                 shapeRenderer.setColor(Color.GREEN);
-                shapeRenderer.getShapeRenderer().circle(tipX + lineSwayFactor, position.y + rodLength + lineLength, 7);
+                shapeRenderer.getShapeRenderer().circle(baitPosition.x, baitPosition.y, 7);
             } else if (currentSuccessLevel == ThrowMinigame.SuccessLevel.GOOD) {
                 shapeRenderer.setColor(Color.YELLOW);
-                shapeRenderer.getShapeRenderer().circle(tipX + lineSwayFactor, position.y + rodLength + lineLength, 6);
+                shapeRenderer.getShapeRenderer().circle(baitPosition.x, baitPosition.y, 6);
             } else {
                 shapeRenderer.setColor(Color.RED);
-                shapeRenderer.getShapeRenderer().circle(tipX + lineSwayFactor, position.y + rodLength + lineLength, 5);
+                shapeRenderer.getShapeRenderer().circle(baitPosition.x, baitPosition.y, 5);
             }
         }
         
@@ -385,27 +385,70 @@ public class FishingRod {
     }
     
     /**
-     * Draws the fishing line with a slight curve for more realism
+     * Draws the fishing line with a parabolic curve towards the middle of the screen (sea)
+     * Returns the coordinates of the bait position for drawing
      */
-    private void drawFishingLine(float startX, float startY) {
+    private Vector2 drawFishingLine(float startX, float startY) {
         shapeRenderer.setColor(LINE_COLOR);
         
-        // For a curved line, we'll draw multiple segments
+        // For a parabolic curve towards the sea (middle of screen)
         int segments = 20;
         float lastX = startX;
         float lastY = startY;
         
+        // Calculate target distance based on success level
+        float targetDistance = lineLength;
+        
+        // Adjust target position based on success level for more realistic casting
+        float targetX = 240f; // Center of screen horizontally (WORLD_WIDTH/2)
+        
+        // Better casts (GOOD, GREAT) go farther horizontally
+        switch (currentSuccessLevel) {
+            case GREAT:
+                targetX = 280f; // Farther right for great casts
+                break;
+            case GOOD:
+                targetX = 260f; // Moderate distance for good casts
+                break;
+            default:
+                targetX = 220f; // Shorter for misses
+                break;
+        }
+        
+        float targetY = startY - targetDistance * 0.5f; // Below the rod, towards the water
+        
+        // Store the bait position (last point of our curve)
+        Vector2 baitPosition = new Vector2(lastX, lastY);
+        
         for (int i = 1; i <= segments; i++) {
             float t = i / (float) segments;
-            float segmentY = startY + lineLength * t;
             
-            // Add some curve based on lineSwayFactor
-            float segmentX = startX + lineSwayFactor * (float) Math.sin(t * Math.PI);
+            // Parametric equation for a parabola from start to target
+            // Quadratic Bezier curve: B(t) = (1-t)^2*P0 + 2(1-t)t*P1 + t^2*P2
+            // Where P0 is start, P2 is end, and P1 is the control point
+            
+            // Control point - create a nice arc
+            float controlX = (startX + targetX) / 2;
+            float controlY = startY - targetDistance * 0.3f; // Control point below start point for a nice arc
+            
+            // Quadratic Bezier formula
+            float segmentX = (1-t)*(1-t)*startX + 2*(1-t)*t*controlX + t*t*targetX;
+            float segmentY = (1-t)*(1-t)*startY + 2*(1-t)*t*controlY + t*t*targetY;
+            
+            // Add some gentle sway based on lineSwayFactor
+            segmentX += lineSwayFactor * (float) Math.sin(t * Math.PI) * 0.3f;
             
             shapeRenderer.getShapeRenderer().line(lastX, lastY, segmentX, segmentY);
             lastX = segmentX;
             lastY = segmentY;
+            
+            // If this is the last segment, store the end position for the bait
+            if (i == segments) {
+                baitPosition.set(segmentX, segmentY);
+            }
         }
+        
+        return baitPosition;
     }
     
     public boolean isPointInCastButton(float x, float y) {

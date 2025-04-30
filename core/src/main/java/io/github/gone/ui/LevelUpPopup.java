@@ -134,13 +134,19 @@ public class LevelUpPopup {
         // Resume SpriteBatch for text
         batch.begin();
         
+        // Calculate optimal spacing between text elements
+        float titleY = y + POPUP_HEIGHT - 15;  // Title position
+        float levelY = titleY - 40;            // Level text (increase space after title)
+        float messageY = levelY - 40;          // Message text (more space between sections)
+        float tipsY = messageY - 50;           // Tips text (more space for multi-line text)
+        
         // Draw title
         titleFont.setColor(new Color(1, 1, 1, alpha));
         String titleText = "Level Up!";
         layout.setText(titleFont, titleText);
         titleFont.draw(batch, titleText, 
             x + (POPUP_WIDTH - layout.width) / 2, 
-            y + POPUP_HEIGHT - 15);
+            titleY);
         
         // Draw level information
         textFont.setColor(new Color(1, 1, 0, alpha));
@@ -148,7 +154,7 @@ public class LevelUpPopup {
         layout.setText(textFont, levelText);
         textFont.draw(batch, levelText,
             x + (POPUP_WIDTH - layout.width) / 2,
-            y + POPUP_HEIGHT - 70);
+            levelY);
         
         // Draw message about new fish
         textFont.setColor(new Color(1, 1, 1, alpha));
@@ -156,14 +162,15 @@ public class LevelUpPopup {
         layout.setText(textFont, message);
         textFont.draw(batch, message,
             x + (POPUP_WIDTH - layout.width) / 2,
-            y + POPUP_HEIGHT/2 - 20);
+            messageY);
         
-        // Draw fishing tips
+        // Draw fishing tips - improved multi-line handling
+        textFont.setColor(new Color(1, 1, 1, alpha));
         String tipsText = "Keep fishing to discover all kinds of\nunderwater treasures and creatures!";
         layout.setText(textFont, tipsText);
         textFont.draw(batch, tipsText,
             x + (POPUP_WIDTH - layout.width) / 2,
-            y + 70);
+            tipsY);
     }
     
     /**
