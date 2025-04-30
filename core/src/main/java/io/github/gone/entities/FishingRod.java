@@ -281,9 +281,13 @@ public class FishingRod {
             }
         }
         
-        // Draw button for casting
+        // Draw button for casting or reeling
         if (!isFishing) {
             shapeRenderer.setColor(Color.YELLOW);
+        } else if (isFishing && lineLength >= getMaxReachableLength() && !isReeling) {
+            // Visual indicator for when to reel - make button pulse when ready to reel
+            float pulse = (float) (0.7f + 0.3f * Math.sin(System.currentTimeMillis() / 200.0));
+            shapeRenderer.setColor(new Color(0.2f, 0.8f, 0.2f * pulse, 1.0f)); // Pulsing green
         } else {
             shapeRenderer.setColor(Color.GRAY);
         }
@@ -299,6 +303,16 @@ public class FishingRod {
             // Draw a simple fishing hook icon
             shapeRenderer.getShapeRenderer().arc(buttonPosition.x, buttonPosition.y, buttonRadius * 0.4f, 180, 180);
             shapeRenderer.getShapeRenderer().rect(buttonPosition.x - 2, buttonPosition.y, 4, buttonRadius * 0.4f);
+        } else if (isFishing && lineLength >= getMaxReachableLength() && !isReeling) {
+            // Ready to reel - draw a visual indicator
+            shapeRenderer.setColor(new Color(0.1f, 0.9f, 0.1f, 1.0f));
+            shapeRenderer.getShapeRenderer().circle(buttonPosition.x, buttonPosition.y, buttonRadius * 0.8f);
+            
+            // Draw reel icon
+            shapeRenderer.setColor(Color.BLACK);
+            shapeRenderer.getShapeRenderer().circle(buttonPosition.x, buttonPosition.y, buttonRadius * 0.5f, 12);
+            shapeRenderer.setColor(new Color(0.1f, 0.9f, 0.1f, 1.0f));
+            shapeRenderer.getShapeRenderer().circle(buttonPosition.x, buttonPosition.y, buttonRadius * 0.3f);
         }
         
         // End ShapeRenderer session
@@ -307,12 +321,20 @@ public class FishingRod {
         // Begin SpriteBatch again
         batch.begin();
         
-        // Draw "CAST" text on button when not fishing
+        // Draw button text
         if (!isFishing) {
             buttonLayout.setText(buttonFont, "CAST");
             buttonFont.draw(batch, "CAST", 
                 buttonPosition.x - buttonLayout.width / 2, 
                 buttonPosition.y - buttonRadius - 10);
+        } else if (isFishing && lineLength >= getMaxReachableLength() && !isReeling) {
+            // Show "REEL!" text when ready to reel
+            buttonFont.setColor(Color.GREEN);
+            buttonLayout.setText(buttonFont, "REEL!");
+            buttonFont.draw(batch, "REEL!", 
+                buttonPosition.x - buttonLayout.width / 2, 
+                buttonPosition.y - buttonRadius - 10);
+            buttonFont.setColor(Color.BLACK); // Reset color
         }
         
         // Draw throw minigame result message if needed
@@ -385,7 +407,8 @@ public class FishingRod {
     }
     
     /**
-     * Draws the fishing line with a parabolic curve towards the middle of the screen (sea)
+     * Draws the fishing line with a parabolic curve towards the middle of the screen (sea) when casting
+     * and a realistic curve back to the rod when reeling in
      * Returns the coordinates of the bait position for drawing
      */
     private Vector2 drawFishingLine(float startX, float startY) {
@@ -420,31 +443,73 @@ public class FishingRod {
         // Store the bait position (last point of our curve)
         Vector2 baitPosition = new Vector2(lastX, lastY);
         
-        for (int i = 1; i <= segments; i++) {
-            float t = i / (float) segments;
+        // Use different curve based on whether we're casting or reeling
+        if (isReeling) {
+            // When reeling in, create a more realistic curve that comes up from the water
+            // Calculate how far along the reeling process we are (0.0 = just started, 1.0 = almost done)
+            float reelingProgress = 1.0f - (lineLength / getMaxReachableLength());
             
-            // Parametric equation for a parabola from start to target
-            // Quadratic Bezier curve: B(t) = (1-t)^2*P0 + 2(1-t)t*P1 + t^2*P2
-            // Where P0 is start, P2 is end, and P1 is the control point
+            // As we reel, the line becomes more vertical
+            float waterX = targetX * (1 - reelingProgress) + startX * reelingProgress;
+            float waterY = targetY + 20 + reelingProgress * 40; // Lift from the water as we reel in
             
-            // Control point - create a nice arc
-            float controlX = (startX + targetX) / 2;
-            float controlY = startY - targetDistance * 0.3f; // Control point below start point for a nice arc
-            
-            // Quadratic Bezier formula
-            float segmentX = (1-t)*(1-t)*startX + 2*(1-t)*t*controlX + t*t*targetX;
-            float segmentY = (1-t)*(1-t)*startY + 2*(1-t)*t*controlY + t*t*targetY;
-            
-            // Add some gentle sway based on lineSwayFactor
-            segmentX += lineSwayFactor * (float) Math.sin(t * Math.PI) * 0.3f;
-            
-            shapeRenderer.getShapeRenderer().line(lastX, lastY, segmentX, segmentY);
-            lastX = segmentX;
-            lastY = segmentY;
-            
-            // If this is the last segment, store the end position for the bait
-            if (i == segments) {
-                baitPosition.set(segmentX, segmentY);
+            for (int i = 1; i <= segments; i++) {
+                float t = i / (float) segments;
+                
+                // Create a curve that changes shape as we reel in
+                // At start of reeling: similar to cast curve
+                // As we progress: transitions to a more vertical curve
+                
+                // Control point varies with reeling progress
+                float controlX = (startX + waterX) / 2 - 50 * (1 - reelingProgress);
+                float controlY = startY - 100 * (1 - reelingProgress);
+                
+                // Quadratic Bezier formula
+                float segmentX = (1-t)*(1-t)*startX + 2*(1-t)*t*controlX + t*t*waterX;
+                float segmentY = (1-t)*(1-t)*startY + 2*(1-t)*t*controlY + t*t*waterY;
+                
+                // Add some gentle sway based on lineSwayFactor and reeling
+                float swayAmount = lineSwayFactor * (float) Math.sin(t * Math.PI) * 0.3f;
+                swayAmount *= (1 - reelingProgress); // Less sway as we reel in
+                segmentX += swayAmount;
+                
+                shapeRenderer.getShapeRenderer().line(lastX, lastY, segmentX, segmentY);
+                lastX = segmentX;
+                lastY = segmentY;
+                
+                // If this is the last segment, store the end position for the bait
+                if (i == segments) {
+                    baitPosition.set(segmentX, segmentY);
+                }
+            }
+        } else {
+            // Regular casting curve
+            for (int i = 1; i <= segments; i++) {
+                float t = i / (float) segments;
+                
+                // Parametric equation for a parabola from start to target
+                // Quadratic Bezier curve: B(t) = (1-t)^2*P0 + 2(1-t)t*P1 + t^2*P2
+                // Where P0 is start, P2 is end, and P1 is the control point
+                
+                // Control point - create a nice arc
+                float controlX = (startX + targetX) / 2;
+                float controlY = startY - targetDistance * 0.3f; // Control point below start point for a nice arc
+                
+                // Quadratic Bezier formula
+                float segmentX = (1-t)*(1-t)*startX + 2*(1-t)*t*controlX + t*t*targetX;
+                float segmentY = (1-t)*(1-t)*startY + 2*(1-t)*t*controlY + t*t*targetY;
+                
+                // Add some gentle sway based on lineSwayFactor
+                segmentX += lineSwayFactor * (float) Math.sin(t * Math.PI) * 0.3f;
+                
+                shapeRenderer.getShapeRenderer().line(lastX, lastY, segmentX, segmentY);
+                lastX = segmentX;
+                lastY = segmentY;
+                
+                // If this is the last segment, store the end position for the bait
+                if (i == segments) {
+                    baitPosition.set(segmentX, segmentY);
+                }
             }
         }
         
