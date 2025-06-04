@@ -7,6 +7,9 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+
+import io.github.gone.fish.Fish;
+import io.github.gone.fish.FishLootTable;
 import io.github.gone.utils.ShapeRendererManager;
 
 /**
@@ -35,6 +38,8 @@ public class ThrowMinigame {
     private float resultMessageTimer;
     private static final float RESULT_MESSAGE_DURATION = 1.5f;
     private boolean showResultOnly = false;
+
+    private FishLootTable fishLootTable;
     
     // Define success levels
     public enum SuccessLevel {
@@ -74,7 +79,7 @@ public class ThrowMinigame {
     private ThrowMinigameListener listener;
     
     public interface ThrowMinigameListener {
-        void onThrowComplete(SuccessLevel successLevel);
+        void onThrowComplete(Fish fish);
     }
     
     public ThrowMinigame(float centerX, float centerY) {
@@ -214,6 +219,7 @@ public class ThrowMinigame {
         resultMessageTimer = RESULT_MESSAGE_DURATION;
         isActive = false;
         showResultOnly = true;
+
         
         // Log throw result information
         Gdx.app.log("ThrowMinigame", "===============================================");
@@ -226,9 +232,12 @@ public class ThrowMinigame {
         Gdx.app.log("ThrowMinigame", "Right Good Zone: " + (successZoneStartAngle + GREAT_ZONE_SIZE) + " to " + (successZoneStartAngle + GREAT_ZONE_SIZE + GOOD_ZONE_SIZE));
         Gdx.app.log("ThrowMinigame", "===============================================");
         
+        Fish fish = fishLootTable.determineFish(successLevel);
+
         // Notify listener
         if (listener != null) {
-            listener.onThrowComplete(successLevel);
+            
+            listener.onThrowComplete(fish);
         }
     }
     
