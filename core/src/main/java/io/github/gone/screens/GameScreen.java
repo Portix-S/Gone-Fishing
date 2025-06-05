@@ -10,7 +10,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import io.github.gone.GoneFishingGame;
-import io.github.gone.entities.FishingRod;
+import io.github.gone.game.GameManager;
 import io.github.gone.input.InputHandler;
 import io.github.gone.progression.ProgressionManager;
 import io.github.gone.ui.ExperienceBar;
@@ -45,7 +45,7 @@ public class GameScreen implements Screen {
     private final SpriteBatch batch;
     private final OrthographicCamera camera;
     private final Viewport viewport;
-    private final FishingRod fishingRod;
+    // private final FishingRod fishingRod;
     private final InputHandler inputHandler;
     
     // UI Elements
@@ -58,10 +58,14 @@ public class GameScreen implements Screen {
     
     // Progression
     private final ProgressionManager progressionManager;
+
+    private final GameManager gameManager;
     
     public GameScreen(GoneFishingGame game) {
         this.game = game;
         this.batch = game.getBatch();
+
+        this.gameManager = new GameManager(new Vector2(WORLD_WIDTH / 2, WORLD_HEIGHT / 4));
         
         camera = new OrthographicCamera();
         viewport = new FitViewport(WORLD_WIDTH, WORLD_HEIGHT, camera);
@@ -88,10 +92,10 @@ public class GameScreen implements Screen {
         playerLogScreen = new PlayerLogScreen();
         
         // Position fishing rod at bottom left
-        fishingRod = new FishingRod(new Vector2(WORLD_WIDTH / 2, WORLD_HEIGHT / 4));
+        // fishingRod = new FishingRod());
         
         // Initialize custom input handler
-        inputHandler = new CustomInputHandler(fishingRod, viewport, levelUpPopup, playerLogScreen);
+        inputHandler = new CustomInputHandler(gameManager, viewport, levelUpPopup, playerLogScreen);
         Gdx.input.setInputProcessor(inputHandler);
     }
     
@@ -119,7 +123,9 @@ public class GameScreen implements Screen {
         batch.begin();
         
         // Draw fishing rod
-        fishingRod.draw(batch);
+        // fishingRod.draw(batch);
+
+        gameManager.draw(batch);
         
         // Draw UI elements
         experienceBar.draw(batch);
@@ -127,7 +133,7 @@ public class GameScreen implements Screen {
         batch.end();
         
         // Only show log button when not in throw minigame
-        if (!fishingRod.isInThrowMinigame() && !fishingRod.isShowingFishCaught()) {
+        if (!gameManager.isInThrowMinigame()  && !gameManager.isShowingFishCaught()) {
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             // Draw log button
             shapeRenderer.setColor(LOG_BUTTON_COLOR);
@@ -256,7 +262,8 @@ public class GameScreen implements Screen {
     
     private void update(float delta) {
         // Update fishing rod
-        fishingRod.update(delta);
+        gameManager.update(delta);
+        // fishingRod.update(delta);
         
         // Update UI elements
         experienceBar.update(delta);
@@ -271,8 +278,8 @@ public class GameScreen implements Screen {
      */
     private void checkForLevelUp() {
         // Only check for level up if no popups are currently shown and we're not in the middle of fishing
-        if (!levelUpPopup.isActive() && !fishingRod.isShowingFishCaught() && 
-            !fishingRod.isFishing() && !fishingRod.isInThrowMinigame()) {
+        if (!levelUpPopup.isActive() && !gameManager.isShowingFishCaught() && !gameManager.isFishing() 
+            && !gameManager.isInThrowMinigame()) {
             
             // Check if level up flag is set
             if (progressionManager.checkAndClearLevelUpFlag()) {
@@ -306,7 +313,8 @@ public class GameScreen implements Screen {
     @Override
     public void dispose() {
         // Dispose of resources
-        fishingRod.dispose();
+        // fishingRod.dispose();
+        gameManager.dispose();
         experienceBar.dispose();
         levelUpPopup.dispose();
         playerLogScreen.dispose();
@@ -327,9 +335,9 @@ public class GameScreen implements Screen {
         private final LevelUpPopup levelUpPopup;
         private final PlayerLogScreen playerLogScreen;
         
-        public CustomInputHandler(FishingRod fishingRod, Viewport viewport, 
+        public CustomInputHandler(GameManager gameManager, Viewport viewport, 
                                  LevelUpPopup levelUpPopup, PlayerLogScreen playerLogScreen) {
-            super(fishingRod, viewport);
+            super(gameManager, viewport);
             this.levelUpPopup = levelUpPopup;
             this.playerLogScreen = playerLogScreen;
         }
@@ -351,7 +359,7 @@ public class GameScreen implements Screen {
             }
             
             // Check if log button was clicked
-            if (fishingRod != null && !fishingRod.isInThrowMinigame() && !fishingRod.isShowingFishCaught() && 
+            if (gameManager != null && !gameManager.isInThrowMinigame() && !gameManager.isShowingFishCaught() && 
                 isPointInLogButton(touchPoint.x, touchPoint.y)) {
                 playerLogScreen.show(new PlayerLogScreen.Callback() {
                     @Override

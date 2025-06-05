@@ -53,7 +53,7 @@ public class GameManager {
     private FishingState currentState;
 
 
-    public  GameManager(Player player, GameState gameState, Vector2 position){
+    public  GameManager(Vector2 position){
        
         // Position the rod on the left side
         // Position the button at the bottom center

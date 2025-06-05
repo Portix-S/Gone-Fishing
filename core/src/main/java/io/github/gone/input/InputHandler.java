@@ -4,18 +4,18 @@ import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import io.github.gone.entities.FishingRod;
+import io.github.gone.game.GameManager;
 
 /**
  * Handles user input for the fishing game.
  */
 public class InputHandler extends InputAdapter {
-    private final FishingRod fishingRod;
+    private final GameManager gameManager;
     private final Viewport viewport;
     private final Vector3 touchPoint;
     
-    public InputHandler(FishingRod fishingRod, Viewport viewport) {
-        this.fishingRod = fishingRod;
+    public InputHandler(GameManager gameManager, Viewport viewport) {
+        this.gameManager = gameManager;
         this.viewport = viewport;
         this.touchPoint = new Vector3();
     }
@@ -27,7 +27,7 @@ public class InputHandler extends InputAdapter {
         viewport.unproject(touchPoint);
         
         // Delegate to the fishing rod to handle the click based on its current state
-        fishingRod.handleClick(touchPoint.x, touchPoint.y);
+        gameManager.handleClick(touchPoint.x, touchPoint.y);
         
         return true;
     }

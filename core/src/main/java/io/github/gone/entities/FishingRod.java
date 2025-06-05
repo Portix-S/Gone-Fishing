@@ -235,7 +235,7 @@ public class FishingRod {
             float guideY = position.y + (endY - position.y) * ratio;
             float guideSize = rodWidth * (1 - ratio * 0.5f);
             
-            shapeRenderer.getShapeRenderer().circle(guideX, guideY, guideSize);
+//            shapeRenderer.getShapeRenderer().circle(guideX, guideY, guideSize);
         }
     }
     
