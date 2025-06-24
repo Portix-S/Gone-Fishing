@@ -4,6 +4,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Preferences;
 import io.github.gone.fish.Fish;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Manages player progression, including experience points, level tracking
  * and persisting progression data between game sessions.
@@ -32,10 +35,10 @@ public class ProgressionManager {
     private boolean hasLeveledUp;
     
     // Storage
-    private final Preferences preferences;
+    private final PersistenceFramework persistenceFramework;
     
     private ProgressionManager() {
-        preferences = Gdx.app.getPreferences("fishing_progression");
+        persistenceFramework = PreferencesPersistenceFramework.getInstance("fishing_progression");
         loadProgress();
         hasLeveledUp = false;
     }
@@ -53,7 +56,8 @@ public class ProgressionManager {
     /**
      * Load progression data from preferences
      */
-    private void loadProgress() {
+    private synchronized void loadProgress() {
+        Preferences preferences = ((PreferencesPersistenceFramework) persistenceFramework).getPreferences();
         currentExp = preferences.getInteger("current_exp", 0);
         currentLevel = preferences.getInteger("current_level", 1);
         totalFishCaught = preferences.getInteger("total_fish_caught", 0);
@@ -63,18 +67,19 @@ public class ProgressionManager {
     /**
      * Save progression data to preferences
      */
-    private void saveProgress() {
-        preferences.putInteger("current_exp", currentExp);
-        preferences.putInteger("current_level", currentLevel);
-        preferences.putInteger("total_fish_caught", totalFishCaught);
-        preferences.putFloat("total_weight", totalWeight);
-        preferences.flush();
+    private synchronized void saveProgress() {
+        Map<String, Object> data = new HashMap<>();
+        data.put("current_exp", currentExp);
+        data.put("current_level", currentLevel);
+        data.put("total_fish_caught", totalFishCaught);
+        data.put("total_weight", totalWeight);
+        persistenceFramework.save(data);
     }
     
     /**
      * Add experience points when player catches a fish
      */
-    public void addExperienceForFish(Fish fish, float weight) {
+    public synchronized void addExperienceForFish(Fish fish, float weight) {
         // Base XP + bonus for rarity
         int expGained = BASE_XP_PER_FISH * fish.getRarity();
         
@@ -117,7 +122,7 @@ public class ProgressionManager {
     /**
      * Check if player has leveled up and update level if necessary
      */
-    private void checkProgress() {
+    private synchronized void checkProgress() {
         for (int level = currentLevel + 1; level <= MAX_LEVEL; level++) {
             if (currentExp >= LEVEL_XP_REQUIREMENTS[level]) {
                 currentLevel = level;
@@ -130,21 +135,21 @@ public class ProgressionManager {
     /**
      * Get the current player level
      */
-    public int getCurrentLevel() {
+    public synchronized int getCurrentLevel() {
         return currentLevel;
     }
     
     /**
      * Get the current player experience
      */
-    public int getCurrentExp() {
+    public synchronized int getCurrentExp() {
         return currentExp;
     }
     
     /**
      * Get the experience required for the next level
      */
-    public int getNextLevelRequirement() {
+    public synchronized int getNextLevelRequirement() {
         if (currentLevel >= MAX_LEVEL) {
             return 0; // Max level reached
         }
@@ -154,7 +159,7 @@ public class ProgressionManager {
     /**
      * Get the experience required for a specific level
      */
-    public int getLevelRequirement(int level) {
+    public synchronized int getLevelRequirement(int level) {
         if (level < 1 || level >= LEVEL_XP_REQUIREMENTS.length) {
             return 0;
         }
@@ -164,14 +169,14 @@ public class ProgressionManager {
     /**
      * Get the total number of fish caught
      */
-    public int getTotalFishCaught() {
+    public synchronized int getTotalFishCaught() {
         return totalFishCaught;
     }
     
     /**
      * Get the total weight of all fish caught
      */
-    public float getTotalWeight() {
+    public synchronized float getTotalWeight() {
         return totalWeight;
     }
     
@@ -179,7 +184,7 @@ public class ProgressionManager {
      * Check if player has leveled up since last call,
      * and reset the flag if they have
      */
-    public boolean checkAndClearLevelUpFlag() {
+    public synchronized boolean checkAndClearLevelUpFlag() {
         boolean result = hasLeveledUp;
         hasLeveledUp = false;
         return result;
@@ -188,7 +193,7 @@ public class ProgressionManager {
     /**
      * Reset all progression (for testing purposes)
      */
-    public void resetProgress() {
+    public synchronized void resetProgress() {
         currentExp = 0;
         currentLevel = 1;
         totalFishCaught = 0;
