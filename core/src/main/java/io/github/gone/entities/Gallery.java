@@ -96,4 +96,8 @@ public class Gallery {
         persistenceFramework.clear();
         Gdx.app.log("Gallery", "Cleared fish gallery data.");
     }
+
+    public synchronized Map<String, FishRegistry> getGallery() {
+        return gallery;
+    }
 }

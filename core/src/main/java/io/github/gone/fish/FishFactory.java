@@ -2,6 +2,7 @@ package io.github.gone.fish;
 
 import com.badlogic.gdx.math.MathUtils;
 import io.github.gone.progression.ProgressionManager;
+import java.util.Map;
 
 /**
  * Factory class for creating fish instances based on their type.
@@ -134,5 +135,23 @@ public class FishFactory {
             default:
                 return false;
         }
+    }
+
+    /**
+     * Returns a map of all possible fish names with a dummy value (e.g., 0).
+     * This is used for populating the gallery with all known fish, including those not yet caught.
+     * @return A Map where keys are fish names and values are placeholder integers.
+     */
+    public Map<String, Integer> getAllFishNames() {
+        Map<String, Integer> allFish = new java.util.HashMap<>();
+        allFish.put("Goldfish", 0);
+        allFish.put("Trout", 0);
+        allFish.put("Koi", 0);
+        allFish.put("Clownfish", 0);
+        allFish.put("Great White Shark", 0);
+        allFish.put("Legendary Fish", 0);
+        allFish.put("Trash Item", 0);
+        allFish.put("Tin Can Fish", 0);
+        return allFish;
     }
 } 

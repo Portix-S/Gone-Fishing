@@ -15,7 +15,7 @@ import io.github.gone.input.InputHandler;
 import io.github.gone.progression.ProgressionManager;
 import io.github.gone.ui.ExperienceBar;
 import io.github.gone.ui.LevelUpPopup;
-import io.github.gone.ui.PlayerLogScreen;
+import io.github.gone.ui.FishGalleryScreen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import io.github.gone.utils.ShapeRendererManager;
@@ -51,7 +51,7 @@ public class GameScreen implements Screen {
     // UI Elements
     private final ExperienceBar experienceBar;
     private final LevelUpPopup levelUpPopup;
-    private final PlayerLogScreen playerLogScreen;
+    private final FishGalleryScreen fishGalleryScreen;
     private final ShapeRendererManager shapeRenderer;
     private final BitmapFont buttonFont;
     private final GlyphLayout glyphLayout;
@@ -85,13 +85,13 @@ public class GameScreen implements Screen {
         // Create UI elements
         experienceBar = new ExperienceBar(20, WORLD_HEIGHT - 50, WORLD_WIDTH - 40);
         levelUpPopup = new LevelUpPopup();
-        playerLogScreen = new PlayerLogScreen();
+        fishGalleryScreen = new FishGalleryScreen();
         
         // Position fishing rod at bottom left
         fishingRod = new FishingRod(new Vector2(WORLD_WIDTH / 2, WORLD_HEIGHT / 4));
         
         // Initialize custom input handler
-        inputHandler = new CustomInputHandler(fishingRod, viewport, levelUpPopup, playerLogScreen);
+        inputHandler = new CustomInputHandler(fishingRod, viewport, levelUpPopup, fishGalleryScreen);
         Gdx.input.setInputProcessor(inputHandler);
     }
     
@@ -134,10 +134,10 @@ public class GameScreen implements Screen {
             shapeRenderer.getShapeRenderer().rect(LOG_BUTTON_X, LOG_BUTTON_Y, LOG_BUTTON_SIZE, LOG_BUTTON_SIZE);
             shapeRenderer.end();
             
-            // Begin batch again to draw "Stats" text on the button
+            // Begin batch again to draw "Gallery" text on the button
             batch.begin();
-            glyphLayout.setText(buttonFont, "Stats");
-            buttonFont.draw(batch, "Stats", 
+            glyphLayout.setText(buttonFont, "Gallery");
+            buttonFont.draw(batch, "Gallery", 
                 LOG_BUTTON_X + (LOG_BUTTON_SIZE - glyphLayout.width) / 2,
                 LOG_BUTTON_Y + (LOG_BUTTON_SIZE + glyphLayout.height) / 2);
             
@@ -147,8 +147,8 @@ public class GameScreen implements Screen {
             }
             
             // Draw player log screen if active
-            if (playerLogScreen.isActive()) {
-                playerLogScreen.draw(batch);
+            if (fishGalleryScreen.isActive()) {
+                fishGalleryScreen.draw(batch);
             }
             
             batch.end();
@@ -162,8 +162,8 @@ public class GameScreen implements Screen {
             }
             
             // Draw player log screen if active
-            if (playerLogScreen.isActive()) {
-                playerLogScreen.draw(batch);
+            if (fishGalleryScreen.isActive()) {
+                fishGalleryScreen.draw(batch);
             }
             
             batch.end();
@@ -309,7 +309,7 @@ public class GameScreen implements Screen {
         fishingRod.dispose();
         experienceBar.dispose();
         levelUpPopup.dispose();
-        playerLogScreen.dispose();
+        fishGalleryScreen.dispose();
         shapeRenderer.dispose();
         buttonFont.dispose();
     }
@@ -325,13 +325,13 @@ public class GameScreen implements Screen {
      */
     private class CustomInputHandler extends InputHandler {
         private final LevelUpPopup levelUpPopup;
-        private final PlayerLogScreen playerLogScreen;
+        private final FishGalleryScreen fishGalleryScreen;
         
         public CustomInputHandler(FishingRod fishingRod, Viewport viewport, 
-                                 LevelUpPopup levelUpPopup, PlayerLogScreen playerLogScreen) {
+                                 LevelUpPopup levelUpPopup, FishGalleryScreen fishGalleryScreen) {
             super(fishingRod, viewport);
             this.levelUpPopup = levelUpPopup;
-            this.playerLogScreen = playerLogScreen;
+            this.fishGalleryScreen = fishGalleryScreen;
         }
         
         @Override
@@ -340,20 +340,18 @@ public class GameScreen implements Screen {
             Vector3 touchPoint = new Vector3(screenX, screenY, 0);
             viewport.unproject(touchPoint);
             
-            // Check if player log screen is active
-            if (playerLogScreen != null && playerLogScreen.isActive()) {
-                return playerLogScreen.handleClick(touchPoint.x, touchPoint.y);
+            // Check if any popup is active and handle its click first
+            if (levelUpPopup.isActive() && levelUpPopup.handleClick(touchPoint.x, touchPoint.y)) {
+                return true;
+            }
+            if (fishGalleryScreen.isActive() && fishGalleryScreen.handleClick(touchPoint.x, touchPoint.y)) {
+                return true;
             }
             
-            // Check if level up popup is active and handle click
-            if (levelUpPopup != null && levelUpPopup.isActive()) {
-                return levelUpPopup.handleClick(touchPoint.x, touchPoint.y);
-            }
-            
-            // Check if log button was clicked
-            if (fishingRod != null && !fishingRod.isInThrowMinigame() && !fishingRod.isShowingFishCaught() && 
+            // Check for log button click only if no popups are active and minigame is not active
+            if (!fishingRod.isInThrowMinigame() && !fishingRod.isShowingFishCaught() && 
                 isPointInLogButton(touchPoint.x, touchPoint.y)) {
-                playerLogScreen.show(new PlayerLogScreen.Callback() {
+                fishGalleryScreen.show(new FishGalleryScreen.Callback() {
                     @Override
                     public void onClose() {
                         // Nothing special needed when closing
