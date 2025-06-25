@@ -354,7 +354,7 @@ public class GameScreen implements Screen {
                 fishGalleryScreen.show(new FishGalleryScreen.Callback() {
                     @Override
                     public void onClose() {
-                        // Nothing special needed when closing
+                        Gdx.input.setInputProcessor(inputHandler); // Restore input processor
                     }
                     
                     @Override

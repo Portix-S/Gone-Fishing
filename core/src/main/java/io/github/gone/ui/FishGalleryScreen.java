@@ -24,6 +24,8 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle;
 
 import java.util.Map;
 
@@ -72,6 +74,8 @@ public class FishGalleryScreen {
     private Texture pixel;
     private Drawable knobDrawable;
     private Drawable scrollBackgroundDrawable;
+    private TextButton resetButton;
+    private TextButton closeButton;
 
     // Progression and Gallery managers
     private final ProgressionManager progressionManager;
@@ -144,15 +148,58 @@ public class FishGalleryScreen {
         scrollPane.setBounds(PANEL_X + 20, PANEL_Y + 150, PANEL_WIDTH - 40, PANEL_HEIGHT - 250);
         stage.addActor(scrollPane);
 
-        // Ensure input is processed by the stage when the screen is active
-        stage.addListener(new InputListener() {
+        // Create TextButton styles
+        TextButtonStyle resetButtonSyle = new TextButtonStyle();
+        resetButtonSyle.font = buttonFont;
+        resetButtonSyle.fontColor = Color.WHITE;
+        // Create a drawable for the reset button background
+        Pixmap resetButtonPixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        resetButtonPixmap.setColor(RESET_BUTTON_COLOR);
+        resetButtonPixmap.fill();
+        Texture resetButtonTexture = new Texture(resetButtonPixmap);
+        resetButtonPixmap.dispose();
+        resetButtonSyle.up = new TextureRegionDrawable(new TextureRegion(resetButtonTexture));
+        skin.add("reset-button", resetButtonSyle);
+
+        TextButtonStyle closeButtonStyle = new TextButtonStyle();
+        closeButtonStyle.font = buttonFont;
+        closeButtonStyle.fontColor = Color.WHITE;
+        // Create a drawable for the close button background
+        Pixmap closeButtonPixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        closeButtonPixmap.setColor(BUTTON_COLOR);
+        closeButtonPixmap.fill();
+        Texture closeButtonTexture = new Texture(closeButtonPixmap);
+        closeButtonPixmap.dispose();
+        closeButtonStyle.up = new TextureRegionDrawable(new TextureRegion(closeButtonTexture));
+        skin.add("close-button", closeButtonStyle);
+
+        // Create and position the buttons
+        resetButton = new TextButton("Reset Progress", skin, "reset-button");
+        resetButton.setBounds(PANEL_X + (PANEL_WIDTH - BUTTON_WIDTH) / 2, RESET_BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT);
+        stage.addActor(resetButton);
+
+        closeButton = new TextButton("Close", skin, "close-button");
+        closeButton.setBounds(PANEL_X + (PANEL_WIDTH - BUTTON_WIDTH) / 2, CLOSE_BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT);
+        stage.addActor(closeButton);
+
+        // Add listeners to buttons
+        resetButton.addListener(new ClickListener() {
             @Override
-            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-                // Only consume event if it's within the scroll pane bounds
-                if (scrollPane.hit(x, y, true) != null) {
-                    return true;
+            public void clicked(InputEvent event, float x, float y) {
+                Gdx.app.log("FishGalleryScreen", "Player requested progress reset");
+                if (callback != null) {
+                    callback.onReset();
                 }
-                return false;
+            }
+        });
+
+        closeButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                hide();
+                if (callback != null) {
+                    callback.onClose();
+                }
             }
         });
     }
@@ -229,16 +276,6 @@ public class FishGalleryScreen {
         shapeRenderer.setColor(TITLE_COLOR);
         shapeRenderer.getShapeRenderer().rect(PANEL_X, PANEL_Y + PANEL_HEIGHT - 60, PANEL_WIDTH, 60);
         
-        // Draw reset button
-        shapeRenderer.setColor(RESET_BUTTON_COLOR);
-        float resetButtonX = PANEL_X + (PANEL_WIDTH - BUTTON_WIDTH) / 2;
-        shapeRenderer.getShapeRenderer().rect(resetButtonX, RESET_BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT);
-        
-        // Draw close button
-        shapeRenderer.setColor(BUTTON_COLOR);
-        float closeButtonX = PANEL_X + (PANEL_WIDTH - BUTTON_WIDTH) / 2;
-        shapeRenderer.getShapeRenderer().rect(closeButtonX, CLOSE_BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT);
-        
         shapeRenderer.end();
         
         // Resume SpriteBatch for text drawing
@@ -251,24 +288,8 @@ public class FishGalleryScreen {
         titleFont.draw(batch, title, 
             PANEL_X + (PANEL_WIDTH - layout.width) / 2, 
             PANEL_Y + PANEL_HEIGHT - 20);
-        
-        // Draw reset button text
-        buttonFont.setColor(Color.WHITE);
-        String resetText = "Reset Progress";
-        layout.setText(buttonFont, resetText);
-        buttonFont.draw(batch, resetText, 
-            resetButtonX + (BUTTON_WIDTH - layout.width) / 2, 
-            RESET_BUTTON_Y + BUTTON_HEIGHT - BUTTON_PADDING);
-        
-        // Draw close button text
-        String closeText = "Close";
-        layout.setText(buttonFont, closeText);
-        buttonFont.draw(batch, closeText, 
-            closeButtonX + (BUTTON_WIDTH - layout.width) / 2, 
-            CLOSE_BUTTON_Y + BUTTON_HEIGHT - BUTTON_PADDING);
 
         // The stage.draw() call handles its own SpriteBatch.begin/end internally
-        // So we end the current batch before drawing the stage, and restart it after
         batch.end();
         stage.act(Gdx.graphics.getDeltaTime());
         stage.draw();
@@ -281,44 +302,9 @@ public class FishGalleryScreen {
     public boolean handleClick(float x, float y) {
         if (!isActive) return false;
 
-        // Check if the click was handled by the stage (e.g., scroll pane)
-        if (stage.touchDown((int)x, (int)y, 0, 0)) {
-            return true;
-        }
-        
-        float resetButtonX = PANEL_X + (PANEL_WIDTH - BUTTON_WIDTH) / 2;
-        float closeButtonX = PANEL_X + (PANEL_WIDTH - BUTTON_WIDTH) / 2;
-        
-        // Check if reset button was clicked
-        if (x >= resetButtonX && x <= resetButtonX + BUTTON_WIDTH &&
-            y >= RESET_BUTTON_Y && y <= RESET_BUTTON_Y + BUTTON_HEIGHT) {
-            
-            // Log reset action
-            Gdx.app.log("FishGalleryScreen", "Player requested progress reset");
-            
-            if (callback != null) {
-                callback.onReset();
-            }
-            return true;
-        }
-        
-        // Check if close button was clicked
-        if (x >= closeButtonX && x <= closeButtonX + BUTTON_WIDTH &&
-            y >= CLOSE_BUTTON_Y && y <= CLOSE_BUTTON_Y + BUTTON_HEIGHT) {
-            
-            hide();
-            if (callback != null) {
-                callback.onClose();
-            }
-            return true;
-        }
-        
-        // Click outside buttons or scroll pane just closes the screen
-        hide();
-        if (callback != null) {
-            callback.onClose();
-        }
-        return true;
+        // The stage handles all input for its actors (buttons and scroll pane)
+        // We don't need to manually check for clicks here anymore.
+        return false; // Indicate that this method did not handle the click
     }
     
     /**
