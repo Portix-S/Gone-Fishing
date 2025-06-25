@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import io.github.gone.entities.Gallery;
 import io.github.gone.fish.Fish;
 import io.github.gone.progression.ProgressionManager;
 import io.github.gone.utils.ShapeRendererManager;
@@ -89,7 +90,9 @@ public class FishCaughtScreen {
         Gdx.app.log("FishCaughtScreen", "Total Weight: " + progressionManager.getTotalWeight() + " KG");
         Gdx.app.log("FishCaughtScreen", "Total Fish: " + progressionManager.getTotalFishCaught());
         Gdx.app.log("FishCaughtScreen", "===============================================");
-        
+
+        Gallery.getInstance().updateGallery(this.caughtFish);
+
         // Add experience for the caught fish
         this.expGained = 10 * fish.getRarity(); // Base XP calculation
         progressionManager.addExperienceForFish(fish, fish.getWeight());

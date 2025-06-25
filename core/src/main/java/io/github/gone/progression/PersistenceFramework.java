@@ -8,4 +8,7 @@ public interface PersistenceFramework {
     Map<String, ?> load();
 
     boolean exists();
-} 
+
+//    Map<String, ?> getAll();
+//    Object getValue(String valueKey);
+}
