@@ -9,6 +9,8 @@ public interface PersistenceFramework {
 
     boolean exists();
 
+    void clear();
+
 //    Map<String, ?> getAll();
 //    Object getValue(String valueKey);
 }

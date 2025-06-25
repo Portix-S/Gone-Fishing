@@ -6,18 +6,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class PreferencesPersistenceFramework implements PersistenceFramework {
-    private static PreferencesPersistenceFramework instance;
     private final Preferences preferences;
+    private final String preferencesName;
 
-    private PreferencesPersistenceFramework(String preferencesName) {
+    public PreferencesPersistenceFramework(String preferencesName) {
+        this.preferencesName = preferencesName;
         this.preferences = Gdx.app.getPreferences(preferencesName);
     }
 
-    public static synchronized PreferencesPersistenceFramework getInstance(String preferencesName) {
-        if (instance == null) {
-            instance = new PreferencesPersistenceFramework(preferencesName);
-        }
-        return instance;
+    public static PreferencesPersistenceFramework getInstance(String preferencesName) {
+        return new PreferencesPersistenceFramework(preferencesName);
     }
 
     @Override
@@ -42,7 +40,45 @@ public class PreferencesPersistenceFramework implements PersistenceFramework {
 
     @Override
     public synchronized Map<String, ?> load() {
-        return new HashMap<>();
+        Map<String, Object> result = new HashMap<>();
+        Gdx.app.log("PersistenceFramework", "Loading data from preferences: " + preferencesName);
+
+        for (String key : preferences.get().keySet()) {
+            Object value = null;
+            // Try to retrieve as various types, starting with the most specific
+            if (preferences.contains(key)) {
+                try {
+                    value = preferences.getInteger(key, 0); // Try integer
+                } catch (ClassCastException e) {
+                    try {
+                        value = preferences.getFloat(key, 0.0f); // Try float
+                    } catch (ClassCastException e2) {
+                        try {
+                            value = preferences.getLong(key, 0L); // Try long
+                        } catch (ClassCastException e3) {
+                            try {
+                                value = preferences.getBoolean(key, false); // Try boolean
+                            } catch (ClassCastException e4) {
+                                value = preferences.getString(key, null); // Default to string
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (value != null) {
+                result.put(key, value);
+                Gdx.app.log("PersistenceFramework", "  Key: " + key + ", Loaded Value: " + value + " (Type: " + value.getClass().getSimpleName() + ")");
+            } else {
+                Gdx.app.log("PersistenceFramework", "  Key: " + key + ", Value is null or could not be loaded.");
+            }
+        }
+
+        if (result.isEmpty()) {
+            Gdx.app.log("PersistenceFramework", "  No data found in preferences.");
+        }
+
+        return result;
     }
 
     public synchronized Preferences getPreferences() {
@@ -51,7 +87,13 @@ public class PreferencesPersistenceFramework implements PersistenceFramework {
 
     @Override
     public synchronized boolean exists() {
-        return preferences.contains("current_exp") || preferences.contains("current_level") ||
-               preferences.contains("total_fish_caught") || preferences.contains("total_weight");
+        return !preferences.get().isEmpty();
+    }
+
+    @Override
+    public synchronized void clear() {
+        preferences.clear();
+        preferences.flush();
+        Gdx.app.log("PersistenceFramework", "Cleared preferences for: " + preferencesName);
     }
 } 

@@ -3,6 +3,7 @@ package io.github.gone.progression;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Preferences;
 import io.github.gone.fish.Fish;
+import io.github.gone.entities.Gallery;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -194,6 +195,9 @@ public class ProgressionManager {
      * Reset all progression (for testing purposes)
      */
     public synchronized void resetProgress() {
+        persistenceFramework.clear();
+        // Also clear the fish gallery when resetting progress
+        Gallery.getInstance().clearGallery();
         currentExp = 0;
         currentLevel = 1;
         totalFishCaught = 0;

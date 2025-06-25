@@ -81,6 +81,40 @@ public class FishFactory {
     }
     
     /**
+     * Creates a fish instance based on its name.
+     * This method is primarily for reconstructing Fish objects from persisted data.
+     * It does not consider player level for fish type generation, always returning the base type.
+     * @param fishName The name of the fish to create.
+     * @return The created Fish instance, or null if the name is not recognized.
+     */
+    public Fish createFishByName(String fishName) {
+        // This could be made more robust with a Map<String, Integer> for lookup
+        // For now, a switch statement will suffice given the limited number of fish types.
+        switch (fishName) {
+            case "Goldfish":
+                return new CommonFish();
+            case "Trout":
+                return new TroutFish();
+            case "Koi":
+                return new RareFish();
+            case "Clownfish":
+                return new ClownFish();
+            case "Great White Shark":
+                return new SharkFish();
+            case "Legendary Fish": // Assuming this is the name for the generic LegendaryFish
+                return new LegendaryFish();
+            case "Trash Item": // Assuming this is the name for the generic TrashItem
+                return new TrashItem();
+            case "Tin Can Fish": // Assuming this is the name for TinCanFish
+                return new TinCanFish();
+            default:
+                // Log a warning or throw an exception if an unknown fish name is encountered.
+                // For now, return null.
+                return null;
+        }
+    }
+    
+    /**
      * Checks if a particular fish type is available at the current player level.
      * 
      * @param fishType Type of fish to check (0=Trash, 1=Common, 2=Rare, 3=Legendary)
