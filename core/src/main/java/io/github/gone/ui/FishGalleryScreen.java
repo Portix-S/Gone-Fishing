@@ -26,6 +26,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle;
+import io.github.gone.fish.Fish;
 
 import java.util.Map;
 
@@ -65,6 +66,7 @@ public class FishGalleryScreen {
     private final BitmapFont textFont;
     private final BitmapFont buttonFont;
     private final GlyphLayout layout;
+    private final SpriteBatch batch;
     
     // Gallery UI elements
     private final Stage stage;
@@ -103,6 +105,7 @@ public class FishGalleryScreen {
         this.gallery = Gallery.getInstance();
         this.fishFactory = new FishFactory();
         this.isActive = false;
+        this.batch = new SpriteBatch();
 
         // Setup Scene2D for scrollable list
         stage = new Stage();
@@ -211,7 +214,6 @@ public class FishGalleryScreen {
         this.callback = callback;
         this.isActive = true;
         populateGallery();
-        Gdx.input.setInputProcessor(stage);
     }
     
     /**
@@ -219,7 +221,6 @@ public class FishGalleryScreen {
      */
     public void hide() {
         this.isActive = false;
-        Gdx.input.setInputProcessor(null); // Clear input processor
     }
 
     /**
@@ -231,7 +232,7 @@ public class FishGalleryScreen {
         Map<String, FishRegistry> caughtFish = gallery.getGallery();
         Map<String, Integer> allFishNames = fishFactory.getAllFishNames(); // Assuming FishFactory can provide all fish names
 
-        // For now, let's just add some dummy data:
+        // Add table headers
         scrollTable.add(new com.badlogic.gdx.scenes.scene2d.ui.Label("Fish Name", skin)).expandX().left().padBottom(5);
         scrollTable.add(new com.badlogic.gdx.scenes.scene2d.ui.Label("Caught", skin)).right().padBottom(5);
         scrollTable.row();
@@ -257,11 +258,8 @@ public class FishGalleryScreen {
     /**
      * Draw the fish gallery screen
      */
-    public void draw(SpriteBatch batch) {
+    public void draw() {
         if (!isActive) return;
-        
-        // Draw darkened overlay and panel background using ShapeRenderer
-        batch.end(); // End the SpriteBatch from GameScreen to use ShapeRenderer
         
         Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
@@ -272,41 +270,90 @@ public class FishGalleryScreen {
         shapeRenderer.setColor(PANEL_COLOR);
         shapeRenderer.getShapeRenderer().rect(PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT);
         
-        // Draw header banner
+        // Draw decorative header banner
         shapeRenderer.setColor(TITLE_COLOR);
         shapeRenderer.getShapeRenderer().rect(PANEL_X, PANEL_Y + PANEL_HEIGHT - 60, PANEL_WIDTH, 60);
         
         shapeRenderer.end();
         
-        // Resume SpriteBatch for text drawing
-        batch.begin();
-        
+        // Use this screen's own batch for the title text
+        this.batch.begin();
         // Draw title
         titleFont.setColor(Color.WHITE);
         String title = "Fish Gallery";
         layout.setText(titleFont, title);
-        titleFont.draw(batch, title, 
-            PANEL_X + (PANEL_WIDTH - layout.width) / 2, 
-            PANEL_Y + PANEL_HEIGHT - 20);
-
-        // The stage.draw() call handles its own SpriteBatch.begin/end internally
-        batch.end();
+        titleFont.draw(this.batch, title, PANEL_X + (PANEL_WIDTH - layout.width) / 2, PANEL_Y + PANEL_HEIGHT - 20);
+        this.batch.end();
+        
+        // Draw the Scene2D stage (which contains the scroll pane and buttons)
         stage.act(Gdx.graphics.getDeltaTime());
         stage.draw();
-        batch.begin(); // Restart batch for anything drawn AFTER the gallery
     }
     
     /**
-     * Handle touch input on the gallery screen
+     * Handle touch input directly by the stage
      */
-    public boolean handleClick(float x, float y) {
+    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
         if (!isActive) return false;
-
-        // The stage handles all input for its actors (buttons and scroll pane)
-        // We don't need to manually check for clicks here anymore.
-        return false; // Indicate that this method did not handle the click
+        return stage.touchDown(screenX, screenY, pointer, button);
     }
-    
+
+    /**
+     * Handle touch up directly by the stage
+     */
+    public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+        if (!isActive) return false;
+        return stage.touchUp(screenX, screenY, pointer, button);
+    }
+
+    /**
+     * Handle touch dragged directly by the stage
+     */
+    public boolean touchDragged(int screenX, int screenY, int pointer) {
+        if (!isActive) return false;
+        return stage.touchDragged(screenX, screenY, pointer);
+    }
+
+    /**
+     * Handle mouse moved directly by the stage
+     */
+    public boolean mouseMoved(int screenX, int screenY) {
+        if (!isActive) return false;
+        return stage.mouseMoved(screenX, screenY);
+    }
+
+    /**
+     * Handle scrolled directly by the stage
+     */
+    public boolean scrolled(float amountX, float amountY) {
+        if (!isActive) return false;
+        return stage.scrolled(amountX, amountY);
+    }
+
+    /**
+     * Handle key down directly by the stage
+     */
+    public boolean keyDown(int keycode) {
+        if (!isActive) return false;
+        return stage.keyDown(keycode);
+    }
+
+    /**
+     * Handle key up directly by the stage
+     */
+    public boolean keyUp(int keycode) {
+        if (!isActive) return false;
+        return stage.keyUp(keycode);
+    }
+
+    /**
+     * Handle key typed directly by the stage
+     */
+    public boolean keyTyped(char character) {
+        if (!isActive) return false;
+        return stage.keyTyped(character);
+    }
+
     /**
      * Check if the screen is currently active
      */
@@ -342,5 +389,24 @@ public class FishGalleryScreen {
         if (((TextureRegionDrawable) scrollBackgroundDrawable).getRegion().getTexture() != null) {
             ((TextureRegionDrawable) scrollBackgroundDrawable).getRegion().getTexture().dispose();
         }
+        if (batch != null) {
+            batch.dispose();
+        }
+    }
+
+    public void toggleVisibility() {
+        this.isActive = !this.isActive;
+        if (this.isActive) {
+            populateGallery(); // Repopulate gallery when shown
+        }
+        if (!this.isActive && callback != null) {
+            callback.onClose(); // Call onClose if the gallery is being hidden
+        }
+    }
+
+    public void addFish(Fish fish) {
+        // This method will be called by GameManager to add a caught fish to the gallery
+        // TODO: Implement storing and displaying collected fish
+        System.out.println("FishGalleryScreen: Added fish to gallery: " + fish.getName());
     }
 } 
