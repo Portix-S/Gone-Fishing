@@ -33,10 +33,6 @@ public class GameManager implements ThrowMinigame.ThrowMinigameListener {
     }
 
     public void update(float delta) {
-        // Update based on current game state
-        if (currentGameState != null) {
-//            currentGameState.update(delta);
-        }
 
         // Update minigame manager if a minigame is active
         if (minigameManager.isMinigameActive()) {
@@ -53,10 +49,6 @@ public class GameManager implements ThrowMinigame.ThrowMinigameListener {
     }
 
     public void draw(SpriteBatch batch) {
-        // Draw based on current game state
-        if (currentGameState != null) {
-//            currentGameState.draw(batch);
-        }
         if (minigameManager.isMinigameActive() || player.getFishingRod().isInThrowMinigame()) {
             minigameManager.draw(batch);
         } else {
@@ -91,10 +83,6 @@ public class GameManager implements ThrowMinigame.ThrowMinigameListener {
         Fish determinedFish = fishLootTable.determineFish(successLevel);
         player.getFishingRod().setCaughtFish(determinedFish);
         
-        // Update Gallery (player.playerGallery) with the caught fish
-        if (player.getFishingRod().getCaughtFish() != null) {
-//            player.getPlayerGallery().addFish(player.getFishingRod().getCaughtFish());
-        }
     }
     
     public boolean isMinigameActive() {
@@ -112,9 +100,5 @@ public class GameManager implements ThrowMinigame.ThrowMinigameListener {
         if (minigameManager != null) {
             minigameManager.dispose();
         }
-        // Dispose currentGameState if it has disposable resources
-        // if (currentGameState instanceof Disposable) {
-        //     ((Disposable) currentGameState).dispose();
-        // }
     }
 }
