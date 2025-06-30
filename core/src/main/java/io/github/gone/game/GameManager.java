@@ -6,11 +6,14 @@ import io.github.gone.entities.Player;
 import io.github.gone.minigames.MinigameManager;
 import io.github.gone.minigames.ThrowMinigame;
 import io.github.gone.states.GameState;
+import io.github.gone.fish.FishLootTable;
+import io.github.gone.fish.Fish;
 
 public class GameManager implements ThrowMinigame.ThrowMinigameListener {
     private Player player;
     private GameState currentGameState;
     private MinigameManager minigameManager;
+    private FishLootTable fishLootTable;
     private float centerX; // To be passed to MinigameManager
     private float centerY; // To be passed to MinigameManager
 
@@ -24,6 +27,7 @@ public class GameManager implements ThrowMinigame.ThrowMinigameListener {
         this.player = new Player(centerX, centerY);
         this.minigameManager = new MinigameManager(centerX, centerY + 150);
         this.minigameManager.getThrowMinigame().setListener(this);
+        this.fishLootTable = new FishLootTable();
         // Set initial game state if needed
         // currentGameState = GameState.SOME_INITIAL_STATE;
     }
@@ -61,28 +65,19 @@ public class GameManager implements ThrowMinigame.ThrowMinigameListener {
     }
 
     public void handleClick(float x, float y) {
-        Gdx.app.log("GameManager", "handleClick: Clicked at (" + x + ", " + y + ")");
-        Gdx.app.log("GameManager", "handleClick: minigameManager.isMinigameActive() = " + minigameManager.isMinigameActive());
-        Gdx.app.log("GameManager", "handleClick: player.getFishingRod().isPointInCastButton = " + player.getFishingRod().isPointInCastButton(x, y));
-        Gdx.app.log("GameManager", "handleClick: player.getFishingRod().isInThrowMinigame() = " + player.getFishingRod().isInThrowMinigame());
         
         if (minigameManager.isMinigameActive()) {
-            Gdx.app.log("GameManager", "handleClick: Minigame active, delegating click to minigameManager.");
             minigameManager.onClick();
         } else if (player.getFishingRod().isPointInCastButton(x, y)) {
-            Gdx.app.log("GameManager", "handleClick: Click on cast/reel button detected.");
             // GameManager now directly determines action based on FishingRod's state
             if (player.getFishingRod().isFishing() && !player.getFishingRod().isReeling() && player.getFishingRod().getLineLength() >= player.getFishingRod().getMaxReachableLength()) {
                 // This condition handles reeling if the cast button is clicked again when reeling is due
-                Gdx.app.log("GameManager", "handleClick: FishingRod ready to reel, starting reeling.");
                 player.getFishingRod().startReeling();
             } else if (player.getFishingRod().getCurrentState() == io.github.gone.entities.FishingRod.FishingState.IDLE) { // Only cast if in IDLE state
-                Gdx.app.log("GameManager", "handleClick: FishingRod is in IDLE state, initiating startFishing().");
                 player.getFishingRod().startFishing(); // Set FishingRod to THROW_MINIGAME state
                 minigameManager.startThrowMinigame(centerX, centerY + 150); // Start the actual minigame
             }
         } else if (player.getFishingRod().isShowingFishCaught()) {
-            Gdx.app.log("GameManager", "handleClick: Fish caught screen active, delegating click.");
             player.getFishingRod().getFishCaughtScreen().handleClick(x, y);
         }
     }
@@ -91,6 +86,11 @@ public class GameManager implements ThrowMinigame.ThrowMinigameListener {
     public void onThrowComplete(ThrowMinigame.SuccessLevel successLevel) {
         // Minigame is complete, update FishingRod
         player.getFishingRod().onMinigameCompletion(successLevel);
+        
+        // Determine the fish using the FishLootTable and pass it to the FishingRod
+        Fish determinedFish = fishLootTable.determineFish(successLevel);
+        player.getFishingRod().setCaughtFish(determinedFish);
+        
         // Update Gallery (player.playerGallery) with the caught fish
         if (player.getFishingRod().getCaughtFish() != null) {
 //            player.getPlayerGallery().addFish(player.getFishingRod().getCaughtFish());

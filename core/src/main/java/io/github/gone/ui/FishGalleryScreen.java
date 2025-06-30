@@ -189,7 +189,6 @@ public class FishGalleryScreen {
         resetButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                Gdx.app.log("FishGalleryScreen", "Player requested progress reset");
                 if (callback != null) {
                     callback.onReset();
                 }

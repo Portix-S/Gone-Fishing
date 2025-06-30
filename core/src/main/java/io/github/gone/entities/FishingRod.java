@@ -41,7 +41,6 @@ public class FishingRod {
     private float lineSwayFactor = 0f;
     
     private final ShapeRendererManager shapeRenderer;
-    private final FishLootTable fishLootTable;
     private Fish caughtFish;
     private ThrowMinigame.SuccessLevel currentMinigameSuccessLevel; // New field to store the success level
     
@@ -75,7 +74,6 @@ public class FishingRod {
         this.isReeling = false;
         this.shapeRenderer = new ShapeRendererManager();
         this.currentState = FishingState.IDLE;
-        this.fishLootTable = new FishLootTable();
         this.fishCaughtScreen = new FishCaughtScreen();
         
         // Initialize text rendering
@@ -105,7 +103,7 @@ public class FishingRod {
         this.currentMinigameSuccessLevel = successLevel; // Store the success level
         
         // Determine what fish will be caught using the loot table
-        caughtFish = fishLootTable.determineFish(successLevel);
+        // REMOVE: caughtFish = fishLootTable.determineFish(successLevel);
         
         // Log fishing start information
         Gdx.app.log("FishingRod", "===============================================");
@@ -583,6 +581,10 @@ public class FishingRod {
     
     public Fish getCaughtFish() {
         return caughtFish;
+    }
+    
+    public void setCaughtFish(Fish fish) {
+        this.caughtFish = fish;
     }
     
     public void dispose() {

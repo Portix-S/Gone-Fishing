@@ -80,16 +80,6 @@ public class FishCaughtScreen {
         this.fishAnimationTimer = 0;
         
         // Log fish added to inventory
-        Gdx.app.log("FishCaughtScreen", "===============================================");
-        Gdx.app.log("FishCaughtScreen", "FISH ADDED TO INVENTORY");
-        Gdx.app.log("FishCaughtScreen", "Name: " + fish.getName());
-        Gdx.app.log("FishCaughtScreen", "Class: " + fish.getClass().getSimpleName());
-        Gdx.app.log("FishCaughtScreen", "Rarity: " + fish.getRarity() + " (" + getRarityName(fish.getRarity()) + ")");
-        Gdx.app.log("FishCaughtScreen", "Weight: " + fish.getWeight() + " KG");
-        Gdx.app.log("FishCaughtScreen", "Description: " + fish.getDescription());
-        Gdx.app.log("FishCaughtScreen", "Total Weight: " + progressionManager.getTotalWeight() + " KG");
-        Gdx.app.log("FishCaughtScreen", "Total Fish: " + progressionManager.getTotalFishCaught());
-        Gdx.app.log("FishCaughtScreen", "===============================================");
 
         Gallery.getInstance().updateGallery(this.caughtFish);
 

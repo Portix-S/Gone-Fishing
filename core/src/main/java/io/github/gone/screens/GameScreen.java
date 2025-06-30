@@ -348,8 +348,6 @@ public class GameScreen implements Screen {
         
         @Override
         public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-            Gdx.app.log("CustomInputHandler", "touchDown: Click received at screen (" + screenX + ", " + screenY + ")");
-
             // Prioritize popups and gallery that cover the whole screen
             if (levelUpPopup.isActive()) {
                 return levelUpPopup.handleClick(viewport.unproject(new Vector3(screenX, screenY, 0)).x, 
@@ -364,7 +362,6 @@ public class GameScreen implements Screen {
             float worldY = worldCoordinates.y;
 
             if (isPointInLogButton(worldX, worldY)) {
-                Gdx.app.log("GameScreen", "Gallery button clicked");
                 fishGalleryScreen.toggleVisibility();
                 return true; // Click handled
             }
