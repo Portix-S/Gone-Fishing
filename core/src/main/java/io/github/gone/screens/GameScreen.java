@@ -305,13 +305,13 @@ public class GameScreen implements Screen {
     
     @Override
     public void dispose() {
-        // Dispose of resources
+        batch.dispose();
+        buttonFont.dispose();
         fishingRod.dispose();
         experienceBar.dispose();
         levelUpPopup.dispose();
         fishGalleryScreen.dispose();
         shapeRenderer.dispose();
-        buttonFont.dispose();
     }
     
     // Helper method to check if point is inside log button
