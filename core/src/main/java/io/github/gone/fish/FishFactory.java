@@ -102,11 +102,11 @@ public class FishFactory {
                 return new ClownFish();
             case "Great White Shark":
                 return new SharkFish();
-            case "Legendary Fish": // Assuming this is the name for the generic LegendaryFish
+            case "Marlin":
                 return new LegendaryFish();
-            case "Trash Item": // Assuming this is the name for the generic TrashItem
+            case "Old Boot":
                 return new TrashItem();
-            case "Tin Can Fish": // Assuming this is the name for TinCanFish
+            case "Rusty Can":
                 return new TinCanFish();
             default:
                 // Log a warning or throw an exception if an unknown fish name is encountered.
@@ -149,9 +149,9 @@ public class FishFactory {
         allFish.put("Koi", 0);
         allFish.put("Clownfish", 0);
         allFish.put("Great White Shark", 0);
-        allFish.put("Legendary Fish", 0);
-        allFish.put("Trash Item", 0);
-        allFish.put("Tin Can Fish", 0);
+        allFish.put("Marlin", 0);
+        allFish.put("Old Boot", 0);
+        allFish.put("Rusty Can", 0);
         return allFish;
     }
 } 

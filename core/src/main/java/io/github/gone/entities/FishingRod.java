@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import io.github.gone.utils.ShapeRendererManager;
+import io.github.gone.minigames.MinigameManager;
 import io.github.gone.minigames.ThrowMinigame;
 import io.github.gone.fish.Fish;
 import io.github.gone.fish.FishLootTable;
@@ -34,16 +35,14 @@ public class FishingRod {
     private final float goodBonusLineLength = 50f; // Additional length for "Good" success
     private final float greatBonusLineLength = 100f; // Additional length for "Great" success
     private boolean isReeling;
-    private ThrowMinigame.SuccessLevel currentSuccessLevel = ThrowMinigame.SuccessLevel.MISS;
     
     // Animation
     private float rodSwayAngle = 0f;
     private float lineSwayFactor = 0f;
     
     private final ShapeRendererManager shapeRenderer;
-    private final ThrowMinigame throwMinigame;
-    private final FishLootTable fishLootTable;
     private Fish caughtFish;
+    private ThrowMinigame.SuccessLevel currentMinigameSuccessLevel; // New field to store the success level
     
     // Fish caught screen
     private final FishCaughtScreen fishCaughtScreen;
@@ -53,7 +52,7 @@ public class FishingRod {
     private final GlyphLayout buttonLayout;
     
     // States for fishing process
-    private enum FishingState {
+    public enum FishingState {
         IDLE,
         THROW_MINIGAME,
         CASTING,
@@ -75,7 +74,6 @@ public class FishingRod {
         this.isReeling = false;
         this.shapeRenderer = new ShapeRendererManager();
         this.currentState = FishingState.IDLE;
-        this.fishLootTable = new FishLootTable();
         this.fishCaughtScreen = new FishCaughtScreen();
         
         // Initialize text rendering
@@ -84,13 +82,13 @@ public class FishingRod {
         this.buttonLayout = new GlyphLayout();
         
         // Create throw minigame at the center of the screen
-        this.throwMinigame = new ThrowMinigame(position.x, position.y + 150);
-        this.throwMinigame.setListener(new ThrowMinigame.ThrowMinigameListener() {
-            @Override
-            public void onThrowComplete(ThrowMinigame.SuccessLevel successLevel) {
-                onThrowMinigameFinished(successLevel);
-            }
-        });
+        // this.minigameManager = new MinigameManager(position.x, position.y + 150); // REMOVE
+        // this.minigameManager.getThrowMinigame().setListener(new ThrowMinigame.ThrowMinigameListener() { // REMOVE
+        //     @Override // REMOVE
+        //     public void onThrowComplete(ThrowMinigame.SuccessLevel successLevel) { // REMOVE
+        //         onThrowMinigameFinished(successLevel); // REMOVE
+        //     } // REMOVE
+        // }); // REMOVE
     }
     
     /**
@@ -102,10 +100,10 @@ public class FishingRod {
         isFishing = true;
         isReeling = false;
         lineLength = 0;
-        currentSuccessLevel = successLevel;
+        this.currentMinigameSuccessLevel = successLevel; // Store the success level
         
         // Determine what fish will be caught using the loot table
-        caughtFish = fishLootTable.determineFish(successLevel);
+        // REMOVE: caughtFish = fishLootTable.determineFish(successLevel);
         
         // Log fishing start information
         Gdx.app.log("FishingRod", "===============================================");
@@ -140,7 +138,7 @@ public class FishingRod {
         }
         
         // Update throw minigame if active
-        throwMinigame.update(delta);
+        // minigameManager.update(delta); // REMOVE
         
         // Update fish caught screen if active
         fishCaughtScreen.update(delta);
@@ -161,7 +159,8 @@ public class FishingRod {
             if (lineLength < maxLength) {
                 // Adjust extension speed based on success level
                 float extensionSpeed;
-                switch (currentSuccessLevel) {
+                // ThrowMinigame.SuccessLevel successLevel = minigameManager.getThrowMinigame() != null ? minigameManager.getThrowMinigame().getSuccessLevel() : ThrowMinigame.SuccessLevel.MISS; // REMOVE
+                switch (this.currentMinigameSuccessLevel) { // Use the stored success level
                     case GREAT:
                         extensionSpeed = 130 * delta; // Fastest for "Great"
                         break;
@@ -188,7 +187,7 @@ public class FishingRod {
                 // Log reeling completion
                 Gdx.app.log("FishingRod", "===============================================");
                 Gdx.app.log("FishingRod", "REELING COMPLETED");
-                Gdx.app.log("FishingRod", "Success Level: " + currentSuccessLevel);
+                Gdx.app.log("FishingRod", "Success Level: " + this.currentMinigameSuccessLevel); // Use the stored success level
                 if (caughtFish != null) {
                     Gdx.app.log("FishingRod", "Fish: " + caughtFish.getName());
                     Gdx.app.log("FishingRod", "Fish Type: " + caughtFish.getClass().getSimpleName());
@@ -210,14 +209,12 @@ public class FishingRod {
                             // Reset to idle state after fish is caught and screen is closed
                             currentState = FishingState.IDLE;
                             isFishing = false;
-                            currentSuccessLevel = ThrowMinigame.SuccessLevel.MISS;
                             caughtFish = null;
                         }
                     });
                 } else {
                     // Reset if no fish was caught (should not happen normally)
                     isFishing = false;
-                    currentSuccessLevel = ThrowMinigame.SuccessLevel.MISS;
                     currentState = FishingState.IDLE;
                     caughtFish = null;
                 }
@@ -233,10 +230,10 @@ public class FishingRod {
         }
         
         // If throw minigame is active, draw it and return
-        if (currentState == FishingState.THROW_MINIGAME) {
-            throwMinigame.draw(batch);
-            return;
-        }
+        // if (currentState == FishingState.THROW_MINIGAME) { // REMOVE
+        //     minigameManager.draw(batch); // REMOVE
+        //     return; // REMOVE
+        // } // REMOVE
         
         // End SpriteBatch to use ShapeRenderer
         batch.end();
@@ -269,10 +266,11 @@ public class FishingRod {
             
             // Draw a small circle at the end of the line (the bait) at the exact endpoint of the curve
             // Change color and size based on success level
-            if (currentSuccessLevel == ThrowMinigame.SuccessLevel.GREAT) {
+            // ThrowMinigame.SuccessLevel successLevel = minigameManager.getThrowMinigame() != null ? minigameManager.getThrowMinigame().getSuccessLevel() : ThrowMinigame.SuccessLevel.MISS; // REMOVE
+            if (this.currentMinigameSuccessLevel == ThrowMinigame.SuccessLevel.GREAT) {
                 shapeRenderer.setColor(Color.GREEN);
                 shapeRenderer.getShapeRenderer().circle(baitPosition.x, baitPosition.y, 7);
-            } else if (currentSuccessLevel == ThrowMinigame.SuccessLevel.GOOD) {
+            } else if (this.currentMinigameSuccessLevel == ThrowMinigame.SuccessLevel.GOOD) {
                 shapeRenderer.setColor(Color.YELLOW);
                 shapeRenderer.getShapeRenderer().circle(baitPosition.x, baitPosition.y, 6);
             } else {
@@ -338,9 +336,9 @@ public class FishingRod {
         }
         
         // Draw throw minigame result message if needed
-        if (throwMinigame.isShowingResult()) {
-            throwMinigame.draw(batch);
-        }
+        // if (minigameManager.isMinigameActive() && minigameManager.getThrowMinigame().isShowingResult()) { // REMOVE
+        //     minigameManager.getThrowMinigame().draw(batch); // REMOVE
+        // } // REMOVE
     }
     
     /**
@@ -426,7 +424,8 @@ public class FishingRod {
         float targetX = 240f; // Center of screen horizontally (WORLD_WIDTH/2)
         
         // Better casts (GOOD, GREAT) go farther horizontally
-        switch (currentSuccessLevel) {
+        // ThrowMinigame.SuccessLevel successLevel = minigameManager.getThrowMinigame() != null ? minigameManager.getThrowMinigame().getSuccessLevel() : ThrowMinigame.SuccessLevel.MISS; // REMOVE
+        switch (this.currentMinigameSuccessLevel) { // Use the stored success level
             case GREAT:
                 targetX = 280f; // Farther right for great casts
                 break;
@@ -522,43 +521,15 @@ public class FishingRod {
     }
     
     public void startFishing() {
-        if (!isFishing && currentState == FishingState.IDLE) {
-            currentState = FishingState.THROW_MINIGAME;
-            throwMinigame.start();
-        }
-    }
-    
-    public void handleClick(float x, float y) {
-        // If fish caught screen is active, let it handle the click
-        if (fishCaughtScreen.isActive()) {
-            fishCaughtScreen.handleClick(x, y);
-            return;
-        }
-        
-        if (currentState == FishingState.THROW_MINIGAME) {
-            throwMinigame.onClick();
-        } else if (currentState == FishingState.CASTING && lineLength >= getMaxReachableLength() && !isReeling) {
-            startReeling();
-        } else if (isPointInCastButton(x, y) && currentState == FishingState.IDLE) {
-            startFishing();
+        if (currentState == FishingState.IDLE) {
+            currentState = FishingState.THROW_MINIGAME; // Simply set the state for GameManager to pick up
+            // No longer initiating minigame directly from here.
         }
     }
     
     public void startReeling() {
-        if (isFishing && lineLength >= getMaxReachableLength()) {
+        if (isFishing && !isReeling && currentState == FishingState.CASTING) {
             isReeling = true;
-            currentState = FishingState.REELING;
-            
-            // Log reeling start
-            Gdx.app.log("FishingRod", "===============================================");
-            Gdx.app.log("FishingRod", "REELING STARTED");
-            Gdx.app.log("FishingRod", "Line Length: " + lineLength);
-            Gdx.app.log("FishingRod", "Max Reachable Length: " + getMaxReachableLength());
-            Gdx.app.log("FishingRod", "Success Level: " + currentSuccessLevel);
-            if (caughtFish != null) {
-                Gdx.app.log("FishingRod", "Potential Fish: " + caughtFish.getName());
-            }
-            Gdx.app.log("FishingRod", "===============================================");
         }
     }
     
@@ -571,11 +542,12 @@ public class FishingRod {
     }
     
     public boolean isInThrowMinigame() {
-        return currentState == FishingState.THROW_MINIGAME;
+        // return currentState == FishingState.THROW_MINIGAME && minigameManager.isMinigameActive(); // REMOVE (Logic will be handled by GameManager)
+        return currentState == FishingState.THROW_MINIGAME; // TEMPORARY ADJUSTMENT
     }
     
     public boolean isShowingFishCaught() {
-        return fishCaughtScreen.isActive();
+        return currentState == FishingState.CAUGHT_FISH && fishCaughtScreen.isActive();
     }
     
     public float getLineLength() {
@@ -587,8 +559,17 @@ public class FishingRod {
     }
     
     public float getMaxReachableLength() {
-        // Return different maximum length based on success level
-        switch (currentSuccessLevel) {
+        // This still uses currentSuccessLevel, which is gone.
+        // We need to pass the success level to the FishLootTable or store it temporarily.
+        // For now, let's keep it simple and assume a default if not set.
+        // TODO: Revisit this to get the success level from the MinigameManager or the FishLootTable.
+        // ThrowMinigame.SuccessLevel successLevel = minigameManager.getThrowMinigame() != null ? minigameManager.getThrowMinigame().getSuccessLevel() : ThrowMinigame.SuccessLevel.MISS; // REMOVE
+        
+        // The success level will be provided by GameManager. For now, use MISS as a placeholder.
+        // ThrowMinigame.SuccessLevel successLevel = ThrowMinigame.SuccessLevel.MISS; // TEMPORARY ADJUSTMENT - REMOVE
+        ThrowMinigame.SuccessLevel successLevel = this.currentMinigameSuccessLevel != null ? this.currentMinigameSuccessLevel : ThrowMinigame.SuccessLevel.MISS; // Use stored success level
+        
+        switch (successLevel) {
             case GREAT:
                 return maxLineLength + greatBonusLineLength;
             case GOOD:
@@ -602,27 +583,26 @@ public class FishingRod {
         return caughtFish;
     }
     
+    public void setCaughtFish(Fish fish) {
+        this.caughtFish = fish;
+    }
+    
     public void dispose() {
-        if (shapeRenderer != null) {
-            shapeRenderer.dispose();
-        }
-        if (throwMinigame != null) {
-            throwMinigame.dispose();
-        }
-        if (fishCaughtScreen != null) {
-            fishCaughtScreen.dispose();
-        }
-        if (buttonFont != null) {
-            buttonFont.dispose();
-        }
-        if (caughtFish != null) {
-            if (caughtFish instanceof io.github.gone.fish.CommonFish) {
-                ((io.github.gone.fish.CommonFish) caughtFish).dispose();
-            } else if (caughtFish instanceof io.github.gone.fish.RareFish) {
-                ((io.github.gone.fish.RareFish) caughtFish).dispose();
-            } else if (caughtFish instanceof io.github.gone.fish.LegendaryFish) {
-                ((io.github.gone.fish.LegendaryFish) caughtFish).dispose();
-            }
-        }
+        shapeRenderer.dispose();
+        buttonFont.dispose();
+        // minigameManager.dispose(); // REMOVE
+        fishCaughtScreen.dispose();
+    }
+    
+    public void onMinigameCompletion(ThrowMinigame.SuccessLevel successLevel) {
+        this.onThrowMinigameFinished(successLevel);
+    }
+    
+    public FishingState getCurrentState() {
+        return currentState;
+    }
+    
+    public FishCaughtScreen getFishCaughtScreen() {
+        return fishCaughtScreen;
     }
 } 

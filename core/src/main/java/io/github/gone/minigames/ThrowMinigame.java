@@ -97,6 +97,10 @@ public class ThrowMinigame {
         this.listener = listener;
     }
     
+    public SuccessLevel getSuccessLevel() {
+        return this.successLevel;
+    }
+    
     public void start() {
         isActive = true;
         currentAngle = 0;

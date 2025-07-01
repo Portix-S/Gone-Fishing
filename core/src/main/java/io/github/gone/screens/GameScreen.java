@@ -10,7 +10,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import io.github.gone.GoneFishingGame;
-import io.github.gone.entities.FishingRod;
+import io.github.gone.game.GameManager;
 import io.github.gone.input.InputHandler;
 import io.github.gone.progression.ProgressionManager;
 import io.github.gone.ui.ExperienceBar;
@@ -45,7 +45,7 @@ public class GameScreen implements Screen {
     private final SpriteBatch batch;
     private final OrthographicCamera camera;
     private final Viewport viewport;
-    private final FishingRod fishingRod;
+    private final GameManager gameManager;
     private final InputHandler inputHandler;
     
     // UI Elements
@@ -87,11 +87,12 @@ public class GameScreen implements Screen {
         levelUpPopup = new LevelUpPopup();
         fishGalleryScreen = new FishGalleryScreen();
         
-        // Position fishing rod at bottom left
-        fishingRod = new FishingRod(new Vector2(WORLD_WIDTH / 2, WORLD_HEIGHT / 4));
+        // Initialize GameManager
+        gameManager = new GameManager(WORLD_WIDTH / 2, WORLD_HEIGHT / 4);
+        gameManager.init();
         
         // Initialize custom input handler
-        inputHandler = new CustomInputHandler(fishingRod, viewport, levelUpPopup, fishGalleryScreen);
+        inputHandler = new CustomInputHandler(gameManager, viewport, levelUpPopup, fishGalleryScreen);
         Gdx.input.setInputProcessor(inputHandler);
     }
     
@@ -119,7 +120,7 @@ public class GameScreen implements Screen {
         batch.begin();
         
         // Draw fishing rod
-        fishingRod.draw(batch);
+        gameManager.draw(batch);
         
         // Draw UI elements
         experienceBar.draw(batch);
@@ -127,7 +128,7 @@ public class GameScreen implements Screen {
         batch.end();
         
         // Only show log button when not in throw minigame
-        if (!fishingRod.isInThrowMinigame() && !fishingRod.isShowingFishCaught()) {
+        if (!gameManager.isMinigameActive() && !gameManager.isShowingFishCaught()) {
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             // Draw log button
             shapeRenderer.setColor(LOG_BUTTON_COLOR);
@@ -148,7 +149,7 @@ public class GameScreen implements Screen {
             
             // Draw player log screen if active
             if (fishGalleryScreen.isActive()) {
-                fishGalleryScreen.draw(batch);
+                fishGalleryScreen.draw();
             }
             
             batch.end();
@@ -163,7 +164,7 @@ public class GameScreen implements Screen {
             
             // Draw player log screen if active
             if (fishGalleryScreen.isActive()) {
-                fishGalleryScreen.draw(batch);
+                fishGalleryScreen.draw();
             }
             
             batch.end();
@@ -255,8 +256,8 @@ public class GameScreen implements Screen {
     }
     
     private void update(float delta) {
-        // Update fishing rod
-        fishingRod.update(delta);
+        // Update GameManager
+        gameManager.update(delta);
         
         // Update UI elements
         experienceBar.update(delta);
@@ -271,8 +272,8 @@ public class GameScreen implements Screen {
      */
     private void checkForLevelUp() {
         // Only check for level up if no popups are currently shown and we're not in the middle of fishing
-        if (!levelUpPopup.isActive() && !fishingRod.isShowingFishCaught() && 
-            !fishingRod.isFishing() && !fishingRod.isInThrowMinigame()) {
+        if (!levelUpPopup.isActive() && !gameManager.isShowingFishCaught() && 
+            !gameManager.isMinigameActive()) {
             
             // Check if level up flag is set
             if (progressionManager.checkAndClearLevelUpFlag()) {
@@ -305,8 +306,8 @@ public class GameScreen implements Screen {
     
     @Override
     public void dispose() {
-        // Dispose of resources
-        fishingRod.dispose();
+        batch.dispose();
+        gameManager.dispose();
         experienceBar.dispose();
         levelUpPopup.dispose();
         fishGalleryScreen.dispose();
@@ -314,61 +315,117 @@ public class GameScreen implements Screen {
         buttonFont.dispose();
     }
     
-    // Helper method to check if point is inside log button
+    public SpriteBatch getBatch() {
+        return batch;
+    }
+    
     private boolean isPointInLogButton(float x, float y) {
-        return x >= LOG_BUTTON_X && x <= LOG_BUTTON_X + LOG_BUTTON_SIZE &&
-               y >= LOG_BUTTON_Y && y <= LOG_BUTTON_Y + LOG_BUTTON_SIZE;
+        if (gameManager.isMinigameActive() || gameManager.isShowingFishCaught()) {
+            return false; // Log button should not be clickable during minigame or fish caught screen
+        }
+        float distance = Vector2.dst(LOG_BUTTON_X + LOG_BUTTON_SIZE / 2, LOG_BUTTON_Y + LOG_BUTTON_SIZE / 2, x, y);
+        return distance <= LOG_BUTTON_SIZE / 2;
     }
     
     /**
      * Custom input handler that also handles popup clicks
      */
     private class CustomInputHandler extends InputHandler {
+        private final GameManager gameManager;
         private final LevelUpPopup levelUpPopup;
         private final FishGalleryScreen fishGalleryScreen;
+        private final Viewport viewport;
+        private final Vector3 touchPoint;
         
-        public CustomInputHandler(FishingRod fishingRod, Viewport viewport, 
+        public CustomInputHandler(GameManager gameManager, Viewport viewport, 
                                  LevelUpPopup levelUpPopup, FishGalleryScreen fishGalleryScreen) {
-            super(fishingRod, viewport);
+            this.gameManager = gameManager;
+            this.viewport = viewport;
+            this.touchPoint = new Vector3();
             this.levelUpPopup = levelUpPopup;
             this.fishGalleryScreen = fishGalleryScreen;
         }
         
         @Override
         public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-            // Convert screen coordinates to world coordinates
-            Vector3 touchPoint = new Vector3(screenX, screenY, 0);
-            viewport.unproject(touchPoint);
-            
-            // Check if any popup is active and handle its click first
-            if (levelUpPopup.isActive() && levelUpPopup.handleClick(touchPoint.x, touchPoint.y)) {
-                return true;
+            // Prioritize popups and gallery that cover the whole screen
+            if (levelUpPopup.isActive()) {
+                return levelUpPopup.handleClick(viewport.unproject(new Vector3(screenX, screenY, 0)).x, 
+                                                 viewport.unproject(new Vector3(screenX, screenY, 0)).y);
+            } else if (fishGalleryScreen.isActive()) {
+                // The FishGalleryScreen's stage now handles input directly
+                return fishGalleryScreen.touchDown(screenX, screenY, pointer, button);
             }
-            if (fishGalleryScreen.isActive() && fishGalleryScreen.handleClick(touchPoint.x, touchPoint.y)) {
-                return true;
-            }
-            
-            // Check for log button click only if no popups are active and minigame is not active
-            if (!fishingRod.isInThrowMinigame() && !fishingRod.isShowingFishCaught() && 
-                isPointInLogButton(touchPoint.x, touchPoint.y)) {
-                fishGalleryScreen.show(new FishGalleryScreen.Callback() {
-                    @Override
-                    public void onClose() {
-                        Gdx.input.setInputProcessor(inputHandler); // Restore input processor
-                    }
-                    
-                    @Override
-                    public void onReset() {
-                        // Reset player progression and update UI
-                        progressionManager.resetProgress();
-                        experienceBar.refresh();
-                    }
-                });
-                return true;
+
+            Vector3 worldCoordinates = viewport.unproject(new Vector3(screenX, screenY, 0));
+            float worldX = worldCoordinates.x;
+            float worldY = worldCoordinates.y;
+
+            if (isPointInLogButton(worldX, worldY)) {
+                fishGalleryScreen.toggleVisibility();
+                return true; // Click handled
             }
             
-            // If no popup handled the click, delegate to fishing rod
-            return super.touchDown(screenX, screenY, pointer, button);
+            // If no specific UI element handled the click, pass to GameManager for game logic
+            gameManager.handleClick(worldX, worldY);
+            
+            return true;
+        }
+
+        @Override
+        public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+            if (fishGalleryScreen.isActive()) {
+                return fishGalleryScreen.touchUp(screenX, screenY, pointer, button);
+            }
+            return super.touchUp(screenX, screenY, pointer, button);
+        }
+
+        @Override
+        public boolean touchDragged(int screenX, int screenY, int pointer) {
+            if (fishGalleryScreen.isActive()) {
+                return fishGalleryScreen.touchDragged(screenX, screenY, pointer);
+            }
+            return super.touchDragged(screenX, screenY, pointer);
+        }
+
+        @Override
+        public boolean mouseMoved(int screenX, int screenY) {
+            if (fishGalleryScreen.isActive()) {
+                return fishGalleryScreen.mouseMoved(screenX, screenY);
+            }
+            return super.mouseMoved(screenX, screenY);
+        }
+
+        @Override
+        public boolean scrolled(float amountX, float amountY) {
+            if (fishGalleryScreen.isActive()) {
+                return fishGalleryScreen.scrolled(amountX, amountY);
+            }
+            return super.scrolled(amountX, amountY);
+        }
+
+        @Override
+        public boolean keyDown(int keycode) {
+            if (fishGalleryScreen.isActive()) {
+                return fishGalleryScreen.keyDown(keycode);
+            }
+            return super.keyDown(keycode);
+        }
+
+        @Override
+        public boolean keyUp(int keycode) {
+            if (fishGalleryScreen.isActive()) {
+                return fishGalleryScreen.keyUp(keycode);
+            }
+            return super.keyUp(keycode);
+        }
+
+        @Override
+        public boolean keyTyped(char character) {
+            if (fishGalleryScreen.isActive()) {
+                return fishGalleryScreen.keyTyped(character);
+            }
+            return super.keyTyped(character);
         }
     }
 } 
