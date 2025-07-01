@@ -3,13 +3,14 @@ package io.github.gone.game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import io.github.gone.entities.Player;
+import io.github.gone.minigames.CatchMinigame;
 import io.github.gone.minigames.MinigameManager;
 import io.github.gone.minigames.ThrowMinigame;
 import io.github.gone.states.GameState;
 import io.github.gone.fish.FishLootTable;
 import io.github.gone.fish.Fish;
 
-public class GameManager implements ThrowMinigame.ThrowMinigameListener {
+public class GameManager implements ThrowMinigame.ThrowMinigameListener, CatchMinigame.CatchMinigameListener {
     private Player player;
     private GameState currentGameState;
     private MinigameManager minigameManager;
@@ -64,7 +65,13 @@ public class GameManager implements ThrowMinigame.ThrowMinigameListener {
             // GameManager now directly determines action based on FishingRod's state
             if (player.getFishingRod().isFishing() && !player.getFishingRod().isReeling() && player.getFishingRod().getLineLength() >= player.getFishingRod().getMaxReachableLength()) {
                 // This condition handles reeling if the cast button is clicked again when reeling is due
-                player.getFishingRod().startReeling();
+                CatchMinigame.FishDifficulty difficulty = switch (player.getFishingRod().getCaughtFish().getRarity()) {
+                    case 1 -> CatchMinigame.FishDifficulty.MEDIUM;
+                    case 2 -> CatchMinigame.FishDifficulty.HARD;
+                    case 3 -> CatchMinigame.FishDifficulty.LEGENDARY;
+                    default -> CatchMinigame.FishDifficulty.EASY;
+                };
+                minigameManager.startCatchMinigame(centerX, centerY + 150, difficulty);
             } else if (player.getFishingRod().getCurrentState() == io.github.gone.entities.FishingRod.FishingState.IDLE) { // Only cast if in IDLE state
                 player.getFishingRod().startFishing(); // Set FishingRod to THROW_MINIGAME state
                 minigameManager.startThrowMinigame(centerX, centerY + 150); // Start the actual minigame
@@ -82,9 +89,12 @@ public class GameManager implements ThrowMinigame.ThrowMinigameListener {
         // Determine the fish using the FishLootTable and pass it to the FishingRod
         Fish determinedFish = fishLootTable.determineFish(successLevel);
         player.getFishingRod().setCaughtFish(determinedFish);
-        
     }
-    
+    @Override
+    public void onFishingCaught(CatchMinigame.FishingResult result, CatchMinigame.FishDifficulty difficulty) {
+        player.getFishingRod().startReeling();
+    }
+
     public boolean isMinigameActive() {
         return minigameManager != null && minigameManager.isMinigameActive();
     }

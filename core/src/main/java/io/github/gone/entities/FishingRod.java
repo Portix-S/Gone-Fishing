@@ -158,20 +158,12 @@ public class FishingRod {
             float maxLength = getMaxReachableLength();
             if (lineLength < maxLength) {
                 // Adjust extension speed based on success level
-                float extensionSpeed;
-                // ThrowMinigame.SuccessLevel successLevel = minigameManager.getThrowMinigame() != null ? minigameManager.getThrowMinigame().getSuccessLevel() : ThrowMinigame.SuccessLevel.MISS; // REMOVE
-                switch (this.currentMinigameSuccessLevel) { // Use the stored success level
-                    case GREAT:
-                        extensionSpeed = 130 * delta; // Fastest for "Great"
-                        break;
-                    case GOOD:
-                        extensionSpeed = 115 * delta; // Medium for "Good"
-                        break;
-                    default:
-                        extensionSpeed = 100 * delta; // Base speed for "Miss"
-                        break;
-                }
-                
+                float extensionSpeed = switch (this.currentMinigameSuccessLevel) { // Use the stored success level
+                    case GREAT -> 130 * delta; // Fastest for "Great"
+                    case GOOD -> 115 * delta; // Medium for "Good"
+                    default -> 100 * delta; // Base speed for "Miss"
+                };
+
                 lineLength += extensionSpeed;
                 if (lineLength > maxLength) {
                     lineLength = maxLength;
