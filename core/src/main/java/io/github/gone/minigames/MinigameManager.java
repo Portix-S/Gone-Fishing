@@ -79,17 +79,6 @@ public class MinigameManager {
     }
 
     /**
-     * Starts the throw minigame
-     */
-    public void startThrowMinigame() {
-        setActiveMinigame(MinigameType.THROW);
-        if (this.throwMinigame == null) {
-            this.throwMinigame = new ThrowMinigame(centerX, centerY);
-        }
-        this.throwMinigame.start();
-    }
-
-    /**
      * Starts the throw minigame at specific position
      */
     public void startThrowMinigame(float centerX, float centerY) {
@@ -98,25 +87,6 @@ public class MinigameManager {
             this.throwMinigame = new ThrowMinigame(centerX, centerY);
         }
         this.throwMinigame.start();
-    }
-
-    /**
-     * Starts the fishing minigame with specified difficulty
-     */
-    public void startCatchMinigame(CatchMinigame.FishDifficulty difficulty) {
-        setActiveMinigame(MinigameType.CATCH);
-        if (this.catchMinigame == null) {
-            this.catchMinigame = new CatchMinigame(centerX - 30, centerY);
-        }
-        this.catchMinigame.setDifficulty(difficulty);
-        this.catchMinigame.start();
-    }
-
-    /**
-     * Starts the fishing minigame with default difficulty
-     */
-    public void startCatchMinigame() {
-        startCatchMinigame(CatchMinigame.FishDifficulty.MEDIUM);
     }
 
     /**

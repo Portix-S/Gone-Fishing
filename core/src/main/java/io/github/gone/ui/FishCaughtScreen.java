@@ -80,7 +80,6 @@ public class FishCaughtScreen {
         this.fishAnimationTimer = 0;
         
         // Log fish added to inventory
-
         Gallery.getInstance().updateGallery(this.caughtFish);
 
         // Add experience for the caught fish
@@ -101,11 +100,11 @@ public class FishCaughtScreen {
      * Returns the rarity name based on the rarity level
      */
     private String getRarityName(int rarity) {
-        switch (rarity) {
-            case 3: return "LEGENDARY";
-            case 2: return "RARE";
-            default: return "COMMON";
-        }
+        return switch (rarity) {
+            case 3 -> "LEGENDARY";
+            case 2 -> "RARE";
+            default -> "COMMON";
+        };
     }
     
     /**

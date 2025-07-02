@@ -56,7 +56,7 @@ public class FishingRod {
         IDLE,
         THROW_MINIGAME,
         CASTING,
-        REELING,
+        CATCH_MINIGAME,
         CAUGHT_FISH
     }
     
@@ -126,7 +126,7 @@ public class FishingRod {
         if (currentState == FishingState.IDLE || currentState == FishingState.CASTING) {
             rodSwayAngle += delta * 1.5f;
             if (rodSwayAngle > 2 * Math.PI) {
-                rodSwayAngle -= 2 * Math.PI;
+                rodSwayAngle -= (float) (2 * Math.PI);
             }
         }
         
@@ -413,22 +413,14 @@ public class FishingRod {
         float targetDistance = lineLength;
         
         // Adjust target position based on success level for more realistic casting
-        float targetX = 240f; // Center of screen horizontally (WORLD_WIDTH/2)
+        float targetX = switch (this.currentMinigameSuccessLevel) { // Use the stored success level
+            case GREAT -> 280f; // Farther right for great casts
+            case GOOD -> 260f; // Moderate distance for good casts
+            default -> 220f; // Shorter for misses
+        }; // Center of screen horizontally (WORLD_WIDTH/2)
         
         // Better casts (GOOD, GREAT) go farther horizontally
-        // ThrowMinigame.SuccessLevel successLevel = minigameManager.getThrowMinigame() != null ? minigameManager.getThrowMinigame().getSuccessLevel() : ThrowMinigame.SuccessLevel.MISS; // REMOVE
-        switch (this.currentMinigameSuccessLevel) { // Use the stored success level
-            case GREAT:
-                targetX = 280f; // Farther right for great casts
-                break;
-            case GOOD:
-                targetX = 260f; // Moderate distance for good casts
-                break;
-            default:
-                targetX = 220f; // Shorter for misses
-                break;
-        }
-        
+
         float targetY = startY - targetDistance * 0.5f; // Below the rod, towards the water
         
         // Store the bait position (last point of our curve)
@@ -534,10 +526,14 @@ public class FishingRod {
     }
     
     public boolean isInThrowMinigame() {
-        // return currentState == FishingState.THROW_MINIGAME && minigameManager.isMinigameActive(); // REMOVE (Logic will be handled by GameManager)
-        return currentState == FishingState.THROW_MINIGAME; // TEMPORARY ADJUSTMENT
+        return currentState == FishingState.THROW_MINIGAME;
     }
-    
+
+    public boolean isInCatchMinigame()
+    {
+        return currentState == FishingState.CATCH_MINIGAME;
+    }
+
     public boolean isShowingFishCaught() {
         return currentState == FishingState.CAUGHT_FISH && fishCaughtScreen.isActive();
     }

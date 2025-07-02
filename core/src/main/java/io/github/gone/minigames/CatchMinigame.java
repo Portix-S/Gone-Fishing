@@ -174,7 +174,7 @@ public class CatchMinigame {
     public void start() {
         isActive = true;
         gameTimer = 0f;
-        progress = 0f;
+        progress = 0.1f;
         result = FishingResult.FAILED;
         resultMessageTimer = 0f;
 
@@ -184,7 +184,7 @@ public class CatchMinigame {
         isPressed = false;
 
         // Randomize initial fish position
-        fishY = barY + MathUtils.random(FISH_SIZE, BAR_HEIGHT - FISH_SIZE);
+        fishY = barY + MathUtils.random(FISH_SIZE + 50f, BAR_HEIGHT - FISH_SIZE - 50f);
         fishTargetY = fishY;
         fishDirection = MathUtils.randomSign();
         fishSpeed = FISH_SPEED_BASE * difficulty.getSpeedMultiplier();

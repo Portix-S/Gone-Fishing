@@ -80,7 +80,6 @@ public class FishGalleryScreen {
     private TextButton closeButton;
 
     // Progression and Gallery managers
-    private final ProgressionManager progressionManager;
     private final Gallery gallery;
     private final FishFactory fishFactory;
     
@@ -101,7 +100,6 @@ public class FishGalleryScreen {
         this.buttonFont = new BitmapFont();
         this.buttonFont.getData().setScale(1.2f);
         this.layout = new GlyphLayout();
-        this.progressionManager = ProgressionManager.getInstance();
         this.gallery = Gallery.getInstance();
         this.fishFactory = new FishFactory();
         this.isActive = false;
@@ -189,6 +187,8 @@ public class FishGalleryScreen {
         resetButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                ProgressionManager.getInstance().resetProgress();
+                populateGallery();
                 if (callback != null) {
                     callback.onReset();
                 }
