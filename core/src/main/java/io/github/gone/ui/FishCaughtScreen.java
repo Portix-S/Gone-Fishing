@@ -84,7 +84,7 @@ public class FishCaughtScreen {
 
         // Add experience for the caught fish
         this.expGained = 10 * fish.getRarity(); // Base XP calculation
-        progressionManager.addExperienceForFish(fish, fish.getWeight());
+        progressionManager.addExperienceForFish(fish.getRarity(), fish.getWeight());
     }
     
     /**

@@ -80,9 +80,9 @@ public class ProgressionManager {
     /**
      * Add experience points when player catches a fish
      */
-    public synchronized void addExperienceForFish(Fish fish, float weight) {
+    public synchronized void addExperienceForFish(int rarityModifier, float weight) {
         // Base XP + bonus for rarity
-        int expGained = BASE_XP_PER_FISH * fish.getRarity();
+        int expGained = BASE_XP_PER_FISH * rarityModifier;
         
         // Store current level for comparison
         int previousLevel = currentLevel;
@@ -94,8 +94,7 @@ public class ProgressionManager {
         // Log experience gained
         Gdx.app.log("ProgressionManager", "===============================================");
         Gdx.app.log("ProgressionManager", "EXPERIENCE AWARDED");
-        Gdx.app.log("ProgressionManager", "Fish: " + fish.getName());
-        Gdx.app.log("ProgressionManager", "Rarity: " + fish.getRarity());
+        Gdx.app.log("ProgressionManager", "Rarity: " + rarityModifier);
         Gdx.app.log("ProgressionManager", "Weight: " + weight);
         Gdx.app.log("ProgressionManager", "XP Gained: " + expGained);
         Gdx.app.log("ProgressionManager", "Current XP: " + currentExp);
