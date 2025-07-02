@@ -404,7 +404,7 @@ public class CatchMinigame {
             font.setColor(Color.WHITE);
 
             // Instructions
-            String instruction = "Hold to lift the green bar!";
+            String instruction = "Click to change the green bar direction!";
             glyphLayout.setText(font, instruction);
             font.draw(batch, instruction, barX + BAR_WIDTH / 2 - glyphLayout.width / 2, barY - 20);
 

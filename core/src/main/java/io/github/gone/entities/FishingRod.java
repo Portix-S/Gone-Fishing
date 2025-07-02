@@ -21,6 +21,10 @@ public class FishingRod {
     private final float buttonRadius = 40f;
     private final Vector2 buttonPosition; // New position for the button
     
+    // Line speed variables
+    private final float lineExtensionBaseSpeed = 300f; // Base speed for extending line
+    private final float lineReelBaseSpeed = 350f;     // Base speed for reeling in line
+    
     // Colors
     private static final Color ROD_HANDLE_COLOR = new Color(0.6f, 0.4f, 0.2f, 1);
     private static final Color ROD_SHAFT_COLOR = new Color(0.8f, 0.6f, 0.3f, 1);
@@ -159,9 +163,9 @@ public class FishingRod {
             if (lineLength < maxLength) {
                 // Adjust extension speed based on success level
                 float extensionSpeed = switch (this.currentMinigameSuccessLevel) { // Use the stored success level
-                    case GREAT -> 130 * delta; // Fastest for "Great"
-                    case GOOD -> 115 * delta; // Medium for "Good"
-                    default -> 100 * delta; // Base speed for "Miss"
+                    case GREAT -> lineExtensionBaseSpeed * 1.3f * delta; // Fastest for "Great"
+                    case GOOD -> lineExtensionBaseSpeed * 1.15f * delta; // Medium for "Good"
+                    default -> lineExtensionBaseSpeed * delta; // Base speed for "Miss"
                 };
 
                 lineLength += extensionSpeed;
@@ -171,7 +175,7 @@ public class FishingRod {
             }
         } else if (isReeling) {
             // Reel in the line
-            lineLength -= 150 * delta;
+            lineLength -= lineReelBaseSpeed * delta;
             if (lineLength <= 0) {
                 lineLength = 0;
                 isReeling = false;
@@ -409,19 +413,15 @@ public class FishingRod {
         float lastX = startX;
         float lastY = startY;
         
-        // Calculate target distance based on success level
-        float targetDistance = lineLength;
-        
-        // Adjust target position based on success level for more realistic casting
-        float targetX = switch (this.currentMinigameSuccessLevel) { // Use the stored success level
+        // Define the initial casting target based on the minigame success level
+        // This represents where the bait would land after a full cast if the line extended fully.
+        float initialCastTargetX = switch (this.currentMinigameSuccessLevel) {
             case GREAT -> 280f; // Farther right for great casts
             case GOOD -> 260f; // Moderate distance for good casts
             default -> 220f; // Shorter for misses
-        }; // Center of screen horizontally (WORLD_WIDTH/2)
-        
-        // Better casts (GOOD, GREAT) go farther horizontally
-
-        float targetY = startY - targetDistance * 0.5f; // Below the rod, towards the water
+        };
+        // The Y coordinate where the line would land at its maximum length.
+        float initialCastTargetY = startY - getMaxReachableLength() * 0.5f;
         
         // Store the bait position (last point of our curve)
         Vector2 baitPosition = new Vector2(lastX, lastY);
@@ -432,24 +432,25 @@ public class FishingRod {
             // Calculate how far along the reeling process we are (0.0 = just started, 1.0 = almost done)
             float reelingProgress = 1.0f - (lineLength / getMaxReachableLength());
             
-            // As we reel, the line becomes more vertical
-            float waterX = targetX * (1 - reelingProgress) + startX * reelingProgress;
-            float waterY = targetY + 20 + reelingProgress * 40; // Lift from the water as we reel in
+            // Interpolate the bait's current target position from its initial cast position back to the rod tip
+            float currentBaitTargetX = initialCastTargetX * (1 - reelingProgress) + startX * reelingProgress;
+            float currentBaitTargetY = initialCastTargetY * (1 - reelingProgress) + startY * reelingProgress;
+            
+            // Add a slight lift to the Y coordinate as it comes back, to prevent it from going "underground"
+            // and to make it look like it's coming out of the water.
+            currentBaitTargetY += reelingProgress * 20; // Lifts it up as it gets closer to the rod
+            
+            // Control point for the Bezier curve during reeling
+            // It should create an arc that pulls the bait up towards the rod tip.
+            float controlX = (startX + currentBaitTargetX) / 2 + 30 * (1 - reelingProgress); // Pull control point slightly right initially
+            float controlY = Math.max(startY, currentBaitTargetY) + 50 * (1 - reelingProgress); // Arc up, then flatten as it approaches rod
             
             for (int i = 1; i <= segments; i++) {
                 float t = i / (float) segments;
                 
-                // Create a curve that changes shape as we reel in
-                // At start of reeling: similar to cast curve
-                // As we progress: transitions to a more vertical curve
-                
-                // Control point varies with reeling progress
-                float controlX = (startX + waterX) / 2 - 50 * (1 - reelingProgress);
-                float controlY = startY - 100 * (1 - reelingProgress);
-                
                 // Quadratic Bezier formula
-                float segmentX = (1-t)*(1-t)*startX + 2*(1-t)*t*controlX + t*t*waterX;
-                float segmentY = (1-t)*(1-t)*startY + 2*(1-t)*t*controlY + t*t*waterY;
+                float segmentX = (1-t)*(1-t)*startX + 2*(1-t)*t*controlX + t*t*currentBaitTargetX;
+                float segmentY = (1-t)*(1-t)*startY + 2*(1-t)*t*controlY + t*t*currentBaitTargetY;
                 
                 // Add some gentle sway based on lineSwayFactor and reeling
                 float swayAmount = lineSwayFactor * (float) Math.sin(t * Math.PI) * 0.3f;
@@ -467,12 +468,14 @@ public class FishingRod {
             }
         } else {
             // Regular casting curve
+            float targetDistance = lineLength;
+            
+            // Adjust target position based on success level for more realistic casting
+            float targetX = initialCastTargetX;
+            float targetY = startY - targetDistance * 0.5f; // Below the rod, towards the water
+            
             for (int i = 1; i <= segments; i++) {
                 float t = i / (float) segments;
-                
-                // Parametric equation for a parabola from start to target
-                // Quadratic Bezier curve: B(t) = (1-t)^2*P0 + 2(1-t)t*P1 + t^2*P2
-                // Where P0 is start, P2 is end, and P1 is the control point
                 
                 // Control point - create a nice arc
                 float controlX = (startX + targetX) / 2;
