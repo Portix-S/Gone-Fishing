@@ -1,7 +1,6 @@
 package io.github.gone.minigames;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import io.github.gone.states.GameState; // Assuming GameState is in states package
 
 public class MinigameManager {
     // Available minigames
@@ -32,25 +31,7 @@ public class MinigameManager {
         this.throwMinigame = new ThrowMinigame(centerX, centerY);
         this.catchMinigame = new CatchMinigame(centerX - 30, centerY); // Offset for better positioning
     }
-
-    public void setupMinigame(GameState state) {
-        // This method will be responsible for setting up the correct minigame
-        // based on the GameState or other game logic.
-        // Implementation depends on how GameState determines which minigame to use
-//        switch (state) {
-//            // Example usage - adjust according to your GameState implementation
-//            // case FISHING:
-//            //     setActiveMinigame(MinigameType.FISHING);
-//            //     break;
-//            // case THROWING:
-//            //     setActiveMinigame(MinigameType.THROW);
-//            //     break;
-//            default:
-//                setActiveMinigame(MinigameType.NONE);
-//                break;
-//        }
-    }
-
+    
     /**
      * Sets the active minigame type
      */

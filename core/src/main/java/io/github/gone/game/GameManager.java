@@ -7,13 +7,11 @@ import io.github.gone.entities.Player;
 import io.github.gone.minigames.CatchMinigame;
 import io.github.gone.minigames.MinigameManager;
 import io.github.gone.minigames.ThrowMinigame;
-import io.github.gone.states.GameState;
 import io.github.gone.fish.FishLootTable;
 import io.github.gone.fish.Fish;
 
 public class GameManager implements ThrowMinigame.ThrowMinigameListener, CatchMinigame.CatchMinigameListener {
     private Player player;
-    private GameState currentGameState;
     private MinigameManager minigameManager;
     private FishLootTable fishLootTable;
     private float centerX; // To be passed to MinigameManager
@@ -43,12 +41,6 @@ public class GameManager implements ThrowMinigame.ThrowMinigameListener, CatchMi
         } else {
             player.getFishingRod().update(delta);
         }
-    }
-
-    public void updateState(GameState newState) {
-        this.currentGameState = newState;
-        // Potentially setup minigame based on new state
-        minigameManager.setupMinigame(newState);
     }
 
     public void draw(SpriteBatch batch) {
